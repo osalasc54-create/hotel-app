@@ -2,15 +2,19 @@
 // 🔐 Decodificar JWT
 // =======================
 function parseJwt(token) {
-  const base64Url = token.split('.')[1];
-  const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-  const jsonPayload = decodeURIComponent(
-    atob(base64)
-      .split('')
-      .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
-      .join('')
-  );
-  return JSON.parse(jsonPayload);
+  try {
+    const base64Url = token.split('.')[1];
+    const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+    const jsonPayload = decodeURIComponent(
+      atob(base64)
+        .split('')
+        .map(c => '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2))
+        .join('')
+    );
+    return JSON.parse(jsonPayload);
+  } catch (err) {
+    return null;
+  }
 }
 
 // =======================
@@ -24,13 +28,21 @@ if (!token) {
 
 const user = parseJwt(token);
 
+if (!user) {
+  localStorage.removeItem('token');
+  window.location.href = 'login.html';
+}
+
 // =======================
 // 🚪 Logout
 // =======================
-document.getElementById('logout').addEventListener('click', () => {
-  localStorage.removeItem('token');
-  window.location.href = 'login.html';
-});
+const logoutBtn = document.getElementById('logout');
+if (logoutBtn) {
+  logoutBtn.addEventListener('click', () => {
+    localStorage.removeItem('token');
+    window.location.href = 'login.html';
+  });
+}
 
 // =======================
 // 👑 Botón Crear Hotel SOLO ADMIN
@@ -38,7 +50,6 @@ document.getElementById('logout').addEventListener('click', () => {
 if (user.role === 'admin') {
   const createBtn = document.createElement('button');
   createBtn.textContent = 'Crear Hotel';
-  createBtn.className = 'create-hotel-btn';
   createBtn.style.margin = '20px';
   createBtn.style.padding = '10px 15px';
   createBtn.style.background = '#4f46e5';
@@ -48,7 +59,6 @@ if (user.role === 'admin') {
   createBtn.style.cursor = 'pointer';
 
   document.body.prepend(createBtn);
-
   createBtn.addEventListener('click', showCreateForm);
 }
 
@@ -56,36 +66,40 @@ if (user.role === 'admin') {
 // 🏨 Cargar hoteles
 // =======================
 async function loadHotels() {
-  const res = await fetch('/api/hotels');
-  const hotels = await res.json();
+  try {
+    const res = await fetch('/api/hotels');
+    const hotels = await res.json();
 
-  const container = document.getElementById('hotelList');
-  container.innerHTML = '';
+    const container = document.getElementById('hotelList');
+    container.innerHTML = '';
 
-  if (!hotels.length) {
-    container.innerHTML = '<p>No hay hoteles disponibles</p>';
-    return;
-  }
+    if (!hotels.length) {
+      container.innerHTML = '<p>No hay hoteles disponibles</p>';
+      return;
+    }
 
-  hotels.forEach(hotel => {
-    container.innerHTML += `
-      <div class="hotel-card">
-        <img 
-          src="${hotel.image_url || 'https://picsum.photos/400/300?random=' + hotel.id}"
-          onerror="this.src='https://picsum.photos/400/300?random=${hotel.id}'"
-        >
-        <div class="hotel-info">
-          <h3>${hotel.name}</h3>
-          <p>${hotel.location}</p>
-          <span>$${hotel.price} / noche</span>
+    hotels.forEach(hotel => {
+      container.innerHTML += `
+        <div class="hotel-card">
+          <img 
+            src="${hotel.image_url || 'https://picsum.photos/400/300?random=' + hotel.id}"
+            onerror="this.src='https://picsum.photos/400/300?random=${hotel.id}'"
+          >
+          <div class="hotel-info">
+            <h3>${hotel.name}</h3>
+            <p>${hotel.location}</p>
+            <span>$${hotel.price} / noche</span>
 
-          <button class="reserve-btn" onclick="reserveHotel(${hotel.id}, '${hotel.name}')">
-            Reservar
-          </button>
+            <button class="reserve-btn" onclick="reserveHotel(${hotel.id}, '${hotel.name}')">
+              Reservar
+            </button>
+          </div>
         </div>
-      </div>
-    `;
-  });
+      `;
+    });
+  } catch (error) {
+    console.error('Error cargando hoteles');
+  }
 }
 
 // =======================
@@ -130,7 +144,13 @@ async function reserveHotel(hotelId, hotelName) {
 // 🏗️ Modal Crear Hotel
 // =======================
 function showCreateForm() {
+
+  // evitar múltiples modales
+  if (document.getElementById('adminModal')) return;
+
   const modal = document.createElement('div');
+  modal.id = 'adminModal';
+
   modal.innerHTML = `
     <div style="
       position:fixed;
@@ -155,20 +175,24 @@ function showCreateForm() {
         <input id="hotelLocation" placeholder="Ubicación" style="width:100%; margin-bottom:10px;" />
         <input id="hotelPrice" type="number" placeholder="Precio" style="width:100%; margin-bottom:10px;" />
         
-        <button id="saveHotel" style="margin-right:10px;">Guardar</button>
-        <button id="closeModal">Cancelar</button>
+        <button type="button" id="saveHotel" style="margin-right:10px;">Guardar</button>
+        <button type="button" id="closeModal">Cancelar</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
 
-  document.getElementById('closeModal').onclick = () => modal.remove();
+  document.getElementById('closeModal').addEventListener('click', () => {
+    modal.remove();
+  });
 
-  document.getElementById('saveHotel').onclick = async () => {
-    const name = document.getElementById('hotelName').value;
-    const locationValue = document.getElementById('hotelLocation').value;
-    const price = document.getElementById('hotelPrice').value;
+  document.getElementById('saveHotel').addEventListener('click', async (e) => {
+    e.preventDefault();
+
+    const name = document.getElementById('hotelName').value.trim();
+    const locationValue = document.getElementById('hotelLocation').value.trim();
+    const price = document.getElementById('hotelPrice').value.trim();
 
     if (!name || !locationValue || !price) {
       alert('Completa todos los campos');
@@ -199,7 +223,7 @@ function showCreateForm() {
     } catch (error) {
       alert('Error creando hotel');
     }
-  };
+  });
 }
 
 // =======================
