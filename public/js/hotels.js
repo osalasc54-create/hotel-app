@@ -190,10 +190,15 @@ function showCreateForm() {
   document.getElementById('saveHotel').addEventListener('click', async (e) => {
     e.preventDefault();
 
-    const name = document.getElementById('hotelName').value.trim();
-    const locationValue = document.getElementById('hotelLocation').value.trim();
-    const price = document.getElementById('hotelPrice').value.trim();
+   const nameInput = document.getElementById('hotelName');
+    const locationInput = document.getElementById('hotelLocation');
+    const priceInput = document.getElementById('hotelPrice');
 
+    const name = nameInput ? nameInput.value.trim() : '';
+    const locationValue = locationInput ? locationInput.value.trim() : '';
+    const price = priceInput ? priceInput.value.trim() : '';
+
+console.log({ name, locationValue, price });
     if (!name || !locationValue || !price) {
       alert('Completa todos los campos');
       return;
