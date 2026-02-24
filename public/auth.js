@@ -23,6 +23,9 @@ if (loginForm) {
 
       // guardar token
       localStorage.setItem('token', data.token);
+      const decoded = JSON.parse(atob(data.token.split('.')[1]));
+
+      localStorage.setItem('role', decoded.role);
 
       // redirigir
       window.location.href = 'index.html';

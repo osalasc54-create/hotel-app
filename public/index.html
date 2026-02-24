@@ -12,6 +12,19 @@
   <button id="logout">Cerrar sesión</button>
 </header>
 
+<!-- 🔥 PANEL ADMIN -->
+<section id="adminPanel" style="display:none; padding:20px; background:#f4f4f4;">
+  <h3>Panel de Administración</h3>
+  <button onclick="mostrarFormulario()">Crear Nuevo Hotel</button>
+
+  <div id="formContainer" style="display:none; margin-top:15px;">
+    <input type="text" id="hotelName" placeholder="Nombre">
+    <input type="text" id="hotelLocation" placeholder="Ubicación">
+    <input type="number" id="hotelPrice" placeholder="Precio">
+    <button onclick="crearHotel()">Guardar</button>
+  </div>
+</section>
+
 <main class="hotel-grid" id="hotelList">
   <!-- aquí se insertan las cards -->
 </main>

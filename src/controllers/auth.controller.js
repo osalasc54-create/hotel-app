@@ -45,7 +45,6 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
-    // 🔐 VALIDACIÓN CLAVE (esto te faltaba)
     if (!email || !password) {
       return res.status(400).json({
         message: 'Email y contraseña son obligatorios'
@@ -53,7 +52,7 @@ exports.login = async (req, res) => {
     }
 
     const [rows] = await db.query(
-      'SELECT * FROM users WHERE email = ?',
+      'SELECT id, email, password, role FROM users WHERE email = ?',
       [email.trim()]
     );
 
@@ -76,7 +75,6 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 🔐 VERIFICACIÓN DE JWT_SECRET
     if (!process.env.JWT_SECRET) {
       console.error('JWT_SECRET no definido');
       return res.status(500).json({
@@ -85,12 +83,19 @@ exports.login = async (req, res) => {
     }
 
     const token = jwt.sign(
-      { id: user.id, email: user.email },
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role   // 🔥 IMPORTANTE
+      },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
     );
 
-    res.json({ token });
+    res.json({
+      token,
+      role: user.role
+    });
 
   } catch (error) {
     console.error('LOGIN ERROR REAL:', error);

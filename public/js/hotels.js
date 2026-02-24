@@ -1,3 +1,13 @@
+// 🔐 Mostrar panel admin si corresponde
+const role = localStorage.getItem('role');
+
+if (role === 'admin') {
+  const adminPanel = document.getElementById('adminPanel');
+  if (adminPanel) {
+    adminPanel.style.display = 'block';
+  }
+}
+
 // 🔒 proteger página
 const token = localStorage.getItem('token');
 if (!token) {
@@ -77,6 +87,42 @@ async function reserveHotel(hotelId, hotelName) {
 
   } catch (error) {
     alert('Error de conexión');
+  }
+}
+
+function mostrarFormulario() {
+  document.getElementById('formContainer').style.display = 'block';
+}
+
+async function crearHotel() {
+  const token = localStorage.getItem('token');
+
+  const name = document.getElementById('hotelName').value;
+  const location = document.getElementById('hotelLocation').value;
+  const price = document.getElementById('hotelPrice').value;
+
+  try {
+    const res = await fetch('/api/hotels', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({ name, location, price })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || 'No tienes permisos');
+      return;
+    }
+
+    alert('Hotel creado correctamente');
+    location.reload();
+
+  } catch (error) {
+    alert('Error creando hotel');
   }
 }
 
