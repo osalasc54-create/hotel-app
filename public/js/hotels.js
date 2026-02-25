@@ -1,6 +1,6 @@
 const stripe = Stripe("pk_test_51T4oCQ45fAEaD6ZMLR57YlV2PfsZe1OGq0kBD5yXVkLTsOVEGavJjd98U29kJhiiF1Hd0lPuJnstTyVGV59ycJzq00wI0kfaVE");
 
-//  Decodificar JWT
+// Decodificar JWT
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
@@ -17,15 +17,12 @@ function parseJwt(token) {
   }
 }
 
-//  Proteger página
+// Proteger página
 const token = localStorage.getItem('token');
-
 if (!token) {
   window.location.href = 'login.html';
 }
-
 const user = parseJwt(token);
-
 if (!user) {
   localStorage.removeItem('token');
   window.location.href = 'login.html';
@@ -40,7 +37,7 @@ if (logoutBtn) {
   });
 }
 
-//  Botón Crear Hotel SOLO ADMIN
+// Botón Crear Hotel SOLO ADMIN
 if (user.role === 'admin') {
   const createBtn = document.createElement('button');
   createBtn.textContent = 'Crear Hotel';
@@ -51,25 +48,21 @@ if (user.role === 'admin') {
   createBtn.style.border = 'none';
   createBtn.style.borderRadius = '6px';
   createBtn.style.cursor = 'pointer';
-
   document.body.prepend(createBtn);
   createBtn.addEventListener('click', showCreateForm);
 }
 
-//  Cargar hoteles
+// Cargar hoteles
 async function loadHotels() {
   try {
     const res = await fetch('/api/hotels');
     const hotels = await res.json();
-
     const container = document.getElementById('hotelList');
     container.innerHTML = '';
-
     if (!hotels.length) {
       container.innerHTML = '<p>No hay hoteles disponibles</p>';
       return;
     }
-
     hotels.forEach(hotel => {
       container.innerHTML += `
         <div class="hotel-card">
@@ -78,40 +71,28 @@ async function loadHotels() {
             <h3>${hotel.name}</h3>
             <p>${hotel.location}</p>
             <span>$${hotel.price} / noche</span>
-
             <div class="hotel-actions">
-              <button onclick="reserveHotel(${hotel.id}, '${hotel.name}', ${hotel.price})">
-                Reservar
-              </button>
-
+              <button onclick="reserveHotel(${hotel.id}, '${hotel.name}', ${hotel.price})">Reservar</button>
               ${user.role === 'admin' ? `
-                <button onclick="editHotel(${hotel.id}, '${hotel.name}', '${hotel.location}', ${hotel.price})">
-                  Editar
-                </button>
-
-                <button onclick="deleteHotel(${hotel.id})">
-                  Eliminar
-                </button>
+                <button onclick="editHotel(${hotel.id}, '${hotel.name}', '${hotel.location}', ${hotel.price})">Editar</button>
+                <button onclick="deleteHotel(${hotel.id})">Eliminar</button>
               ` : ''}
             </div>
           </div>
         </div>
       `;
     });
-
   } catch (error) {
     console.error('Error cargando hoteles');
   }
 }
 
-// 🔥 MODAL RESERVA → AHORA CON PAGO
-function reserveHotel(hotelId, hotelName, pricePerNight) {
-
+// 🔥 MODAL RESERVA → CON VALIDACIÓN DE FECHAS OCUPADAS Y TOTAL CORRECTO
+async function reserveHotel(hotelId, hotelName, pricePerNight) {
   if (document.getElementById('reservationModal')) return;
 
   const modal = document.createElement('div');
   modal.id = 'reservationModal';
-
   modal.innerHTML = `
     <div style="
       position:fixed;
@@ -132,29 +113,38 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
         width:400px;
       ">
         <h2>${hotelName}</h2>
-
         <label>Fecha de entrada</label>
         <input type="date" id="startDate" style="width:100%; margin-bottom:10px;">
-
         <label>Fecha de salida</label>
         <input type="date" id="endDate" style="width:100%; margin-bottom:15px;">
-
         <div id="reservationSummary" style="margin-bottom:15px; font-weight:bold;"></div>
-
         <button id="goToPayment">Proceder al pago</button>
         <button id="closeReservation">Cancelar</button>
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
 
   const startInput = document.getElementById('startDate');
   const endInput = document.getElementById('endDate');
   const summary = document.getElementById('reservationSummary');
 
-  let nights = 0;
-  let total = 0;
+  // 🔥 Bloquear fechas pasadas
+  const today = new Date().toISOString().split('T')[0];
+  startInput.min = today;
+  endInput.min = today;
+
+  // 🔥 Obtener reservas existentes
+  const response = await fetch(`/api/reservations/hotel/${hotelId}`);
+  const reservedDates = await response.json();
+
+  function isDateBlocked(start, end) {
+    return reservedDates.some(reservation => {
+      const reservedStart = new Date(reservation.start_date);
+      const reservedEnd = new Date(reservation.end_date);
+      return !(end <= reservedStart || start >= reservedEnd);
+    });
+  }
 
   function updateCalculation() {
     if (!startInput.value || !endInput.value) {
@@ -170,9 +160,15 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
       return;
     }
 
+    // 🔴 Validar solapamiento visual
+    if (isDateBlocked(start, end)) {
+      summary.innerHTML = 'Esas fechas ya están reservadas';
+      return;
+    }
+
     const diffTime = end - start;
-    nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    total = nights * pricePerNight;
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const total = nights * pricePerNight;
 
     summary.innerHTML = `
       Noches: ${nights}<br>
@@ -187,23 +183,33 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
   document.getElementById('closeReservation').onclick = () => modal.remove();
 
   document.getElementById('goToPayment').onclick = () => {
-    if (!startInput.value || !endInput.value || nights <= 0) {
+    if (!startInput.value || !endInput.value) {
       alert('Selecciona fechas válidas');
       return;
     }
+
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+
+    if (isDateBlocked(start, end)) {
+      alert('No puedes reservar fechas ocupadas');
+      return;
+    }
+
+    // ✅ Cálculo del total y llamada correcta con 4 parámetros
+    const diffTime = end - start;
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const total = nights * pricePerNight;
 
     showPaymentModal(hotelId, startInput.value, endInput.value, total);
   };
 }
 
-// 💳 MODAL DE PAGO
+// 💳 MODAL DE PAGO (sin cambios)
 async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
-
   if (document.getElementById('paymentModal')) return;
-
   const paymentModal = document.createElement('div');
   paymentModal.id = 'paymentModal';
-
   paymentModal.innerHTML = `
     <div style="
       position:fixed;
@@ -224,20 +230,16 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
         width:400px;
       ">
         <h2>Pago Seguro</h2>
-
         <p>Total a pagar: <strong>$${totalAmount}</strong></p>
-
         <form id="payment-form">
           <div id="card-element" style="margin-bottom:15px;"></div>
           <div id="card-errors" style="color:red; margin-bottom:10px;"></div>
-
           <button type="submit">Pagar ahora</button>
           <button type="button" id="cancelPayment">Cancelar</button>
         </form>
       </div>
     </div>
   `;
-
   document.body.appendChild(paymentModal);
 
   document.getElementById('cancelPayment').onclick = () => {
@@ -257,15 +259,12 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
       end_date: endDate
     })
   });
-
   const data = await response.json();
-
   if (!response.ok) {
     alert(data.message || 'Error creando pago');
     paymentModal.remove();
     return;
   }
-
   const clientSecret = data.clientSecret;
 
   // 🔥 2️⃣ Crear Stripe Elements
@@ -285,7 +284,6 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
   // 🔥 3️⃣ Confirmar pago real
   document.getElementById('payment-form').addEventListener('submit', async function(e) {
     e.preventDefault();
-
     const { paymentIntent, error } = await stripe.confirmCardPayment(
       clientSecret,
       {
@@ -301,7 +299,6 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
     }
 
     if (paymentIntent.status === "succeeded") {
-
       // 🔥 4️⃣ Crear reserva SOLO si pago fue exitoso
       const reservationResponse = await fetch('/api/reservations', {
         method: 'POST',
@@ -315,29 +312,23 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
           end_date: endDate
         })
       });
-
       const reservationData = await reservationResponse.json();
-
       if (!reservationResponse.ok) {
         alert(reservationData.message || 'Error creando reserva');
         return;
       }
-
       alert(`✅ Pago exitoso\nReserva confirmada\nTotal pagado: $${reservationData.total_price}`);
-
       document.getElementById('reservationModal')?.remove();
       paymentModal.remove();
     }
   });
 }
 
-//  Modal Crear Hotel
+// Modal Crear Hotel (sin cambios)
 function showCreateForm() {
   if (document.getElementById('adminModal')) return;
-
   const modal = document.createElement('div');
   modal.id = 'adminModal';
-
   modal.innerHTML = `
     <div style="
       position:fixed;
@@ -361,27 +352,21 @@ function showCreateForm() {
         <input id="hotelName" placeholder="Nombre" style="width:100%; margin-bottom:10px;" />
         <input id="hotelLocation" placeholder="Ubicación" style="width:100%; margin-bottom:10px;" />
         <input id="hotelPrice" type="number" placeholder="Precio" style="width:100%; margin-bottom:10px;" />
-        
         <button id="saveHotel">Guardar</button>
         <button id="closeModal">Cancelar</button>
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
-
   document.getElementById('closeModal').onclick = () => modal.remove();
-
   document.getElementById('saveHotel').onclick = async () => {
     const name = document.getElementById('hotelName').value.trim();
     const location = document.getElementById('hotelLocation').value.trim();
     const price = document.getElementById('hotelPrice').value.trim();
-
     if (!name || !location || !price) {
       alert('Completa todos los campos');
       return;
     }
-
     try {
       const res = await fetch('/api/hotels', {
         method: 'POST',
@@ -391,29 +376,24 @@ function showCreateForm() {
         },
         body: JSON.stringify({ name, location, price })
       });
-
       if (!res.ok) {
         alert('Error creando hotel');
         return;
       }
-
       alert('Hotel creado correctamente');
       modal.remove();
       loadHotels();
-
     } catch (error) {
       alert('Error de conexión');
     }
   };
 }
 
-// ✏️ Editar hotel
+// ✏️ Editar hotel (sin cambios)
 function editHotel(id, name, location, price) {
   if (document.getElementById('adminModal')) return;
-
   const modal = document.createElement('div');
   modal.id = 'adminModal';
-
   modal.innerHTML = `
     <div style="
       position:fixed;
@@ -437,22 +417,17 @@ function editHotel(id, name, location, price) {
         <input id="editName" value="${name}" style="width:100%; margin-bottom:10px;" />
         <input id="editLocation" value="${location}" style="width:100%; margin-bottom:10px;" />
         <input id="editPrice" type="number" value="${price}" style="width:100%; margin-bottom:10px;" />
-        
         <button id="updateHotel">Actualizar</button>
         <button id="closeModal">Cancelar</button>
       </div>
     </div>
   `;
-
   document.body.appendChild(modal);
-
   document.getElementById('closeModal').onclick = () => modal.remove();
-
   document.getElementById('updateHotel').onclick = async () => {
     const updatedName = document.getElementById('editName').value;
     const updatedLocation = document.getElementById('editLocation').value;
     const updatedPrice = document.getElementById('editPrice').value;
-
     try {
       const res = await fetch('/api/hotels/' + id, {
         method: 'PUT',
@@ -466,27 +441,23 @@ function editHotel(id, name, location, price) {
           price: updatedPrice
         })
       });
-
       if (!res.ok) {
         alert('Error actualizando');
         return;
       }
-
       alert('Hotel actualizado');
       modal.remove();
       loadHotels();
-
     } catch (err) {
       alert('Error de conexión');
     }
   };
 }
 
-// 🗑 Eliminar hotel
+// 🗑 Eliminar hotel (sin cambios)
 async function deleteHotel(id) {
   const confirmDelete = confirm('¿Seguro que quieres eliminar este hotel?');
   if (!confirmDelete) return;
-
   try {
     const res = await fetch('/api/hotels/' + id, {
       method: 'DELETE',
@@ -494,15 +465,12 @@ async function deleteHotel(id) {
         'Authorization': 'Bearer ' + token
       }
     });
-
     if (!res.ok) {
       alert('Error eliminando');
       return;
     }
-
     alert('Hotel eliminado');
     loadHotels();
-
   } catch (err) {
     alert('Error de conexión');
   }
