@@ -1,3 +1,5 @@
+const stripe = Stripe("pk_test_51T4oCQ45fAEaD6ZMLR57YlV2PfsZe1OGq0kBD5yXVkLTsOVEGavJjd98U29kJhiiF1Hd0lPuJnstTyVGV59ycJzq00wI0kfaVE");
+
 //  Decodificar JWT
 function parseJwt(token) {
   try {
@@ -195,7 +197,7 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
 }
 
 // 💳 MODAL DE PAGO
-function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
+async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
 
   if (document.getElementById('paymentModal')) return;
 
@@ -225,12 +227,13 @@ function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
 
         <p>Total a pagar: <strong>$${totalAmount}</strong></p>
 
-        <input placeholder="Número de tarjeta" style="width:100%; margin-bottom:10px;">
-        <input placeholder="MM/AA" style="width:48%; margin-bottom:10px;">
-        <input placeholder="CVC" style="width:48%; margin-bottom:10px; float:right;">
+        <form id="payment-form">
+          <div id="card-element" style="margin-bottom:15px;"></div>
+          <div id="card-errors" style="color:red; margin-bottom:10px;"></div>
 
-        <button id="confirmPayment">Pagar ahora</button>
-        <button id="cancelPayment">Cancelar</button>
+          <button type="submit">Pagar ahora</button>
+          <button type="button" id="cancelPayment">Cancelar</button>
+        </form>
       </div>
     </div>
   `;
@@ -241,9 +244,66 @@ function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
     paymentModal.remove();
   };
 
-  document.getElementById('confirmPayment').onclick = async () => {
-    try {
-      const res = await fetch('/api/reservations', {
+  // 🔥 1️⃣ Crear PaymentIntent en backend
+  const response = await fetch('/api/payments/create-payment-intent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({
+      hotel_id: hotelId,
+      start_date: startDate,
+      end_date: endDate
+    })
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    alert(data.message || 'Error creando pago');
+    paymentModal.remove();
+    return;
+  }
+
+  const clientSecret = data.clientSecret;
+
+  // 🔥 2️⃣ Crear Stripe Elements
+  const elements = stripe.elements();
+  const card = elements.create("card");
+  card.mount("#card-element");
+
+  card.on('change', function(event) {
+    const displayError = document.getElementById('card-errors');
+    if (event.error) {
+      displayError.textContent = event.error.message;
+    } else {
+      displayError.textContent = '';
+    }
+  });
+
+  // 🔥 3️⃣ Confirmar pago real
+  document.getElementById('payment-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const { paymentIntent, error } = await stripe.confirmCardPayment(
+      clientSecret,
+      {
+        payment_method: {
+          card: card
+        }
+      }
+    );
+
+    if (error) {
+      document.getElementById('card-errors').textContent = error.message;
+      return;
+    }
+
+    if (paymentIntent.status === "succeeded") {
+
+      // 🔥 4️⃣ Crear reserva SOLO si pago fue exitoso
+      const reservationResponse = await fetch('/api/reservations', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -256,26 +316,19 @@ function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
         })
       });
 
-      const data = await res.json();
+      const reservationData = await reservationResponse.json();
 
-      if (!res.ok) {
-        alert(data.message || 'Error procesando pago');
+      if (!reservationResponse.ok) {
+        alert(reservationData.message || 'Error creando reserva');
         return;
       }
 
-      alert(
-        `✅ Pago exitoso\n\n` +
-        `Reserva confirmada\n` +
-        `Total pagado: $${data.total_price}`
-      );
+      alert(`✅ Pago exitoso\nReserva confirmada\nTotal pagado: $${reservationData.total_price}`);
 
       document.getElementById('reservationModal')?.remove();
       paymentModal.remove();
-
-    } catch (error) {
-      alert('Error de conexión');
     }
-  };
+  });
 }
 
 //  Modal Crear Hotel
