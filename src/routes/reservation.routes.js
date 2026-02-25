@@ -5,4 +5,9 @@ const authMiddleware = require('../middlewares/auth.middleware');
 
 router.post('/', authMiddleware, reservationController.createReservation);
 
+router.get(
+  '/hotel/:hotelId',
+  reservationController.getReservationsByHotel
+);
+
 module.exports = router;
