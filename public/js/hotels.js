@@ -1,6 +1,4 @@
-// =======================
-// 🔐 Decodificar JWT
-// =======================
+//  Decodificar JWT
 function parseJwt(token) {
   try {
     const base64Url = token.split('.')[1];
@@ -17,9 +15,7 @@ function parseJwt(token) {
   }
 }
 
-// =======================
-// 🔒 Proteger página
-// =======================
+//  Proteger página
 const token = localStorage.getItem('token');
 
 if (!token) {
@@ -33,9 +29,7 @@ if (!user) {
   window.location.href = 'login.html';
 }
 
-// =======================
 // 🚪 Logout
-// =======================
 const logoutBtn = document.getElementById('logout');
 if (logoutBtn) {
   logoutBtn.addEventListener('click', () => {
@@ -44,9 +38,7 @@ if (logoutBtn) {
   });
 }
 
-// =======================
-// 👑 Botón Crear Hotel SOLO ADMIN
-// =======================
+//  Botón Crear Hotel SOLO ADMIN
 if (user.role === 'admin') {
   const createBtn = document.createElement('button');
   createBtn.textContent = 'Crear Hotel';
@@ -62,9 +54,7 @@ if (user.role === 'admin') {
   createBtn.addEventListener('click', showCreateForm);
 }
 
-// =======================
-// 🏨 Cargar hoteles
-// =======================
+//  Cargar hoteles
 async function loadHotels() {
   try {
     const res = await fetch('/api/hotels');
@@ -90,21 +80,33 @@ async function loadHotels() {
             <p>${hotel.location}</p>
             <span>$${hotel.price} / noche</span>
 
-            <button class="reserve-btn" onclick="reserveHotel(${hotel.id}, '${hotel.name}')">
-              Reservar
-            </button>
+            <div class="hotel-actions">
+              <button class="reserve-btn"
+                onclick="reserveHotel(${hotel.id}, '${hotel.name}')">
+                Reservar
+              </button>
+
+              ${user.role === 'admin' ? `
+                <button onclick="editHotel(${hotel.id}, '${hotel.name}', '${hotel.location}', ${hotel.price})">
+                  Editar
+                </button>
+
+                <button onclick="deleteHotel(${hotel.id})">
+                  Eliminar
+                </button>
+              ` : ''}
+            </div>
           </div>
         </div>
       `;
     });
+
   } catch (error) {
     console.error('Error cargando hoteles');
   }
 }
 
-// =======================
-// 📅 Reservar hotel
-// =======================
+//  Reservar hotel
 async function reserveHotel(hotelId, hotelName) {
   const startDate = prompt(`Fecha de entrada para ${hotelName} (YYYY-MM-DD)`);
   if (!startDate) return;
@@ -140,12 +142,9 @@ async function reserveHotel(hotelId, hotelName) {
   }
 }
 
-// =======================
-// 🏗️ Modal Crear Hotel
-// =======================
+//  Modal Crear Hotel
 function showCreateForm() {
 
-  // evitar múltiples modales
   if (document.getElementById('adminModal')) return;
 
   const modal = document.createElement('div');
@@ -175,31 +174,22 @@ function showCreateForm() {
         <input id="hotelLocation" placeholder="Ubicación" style="width:100%; margin-bottom:10px;" />
         <input id="hotelPrice" type="number" placeholder="Precio" style="width:100%; margin-bottom:10px;" />
         
-        <button type="button" id="saveHotel" style="margin-right:10px;">Guardar</button>
-        <button type="button" id="closeModal">Cancelar</button>
+        <button id="saveHotel">Guardar</button>
+        <button id="closeModal">Cancelar</button>
       </div>
     </div>
   `;
 
   document.body.appendChild(modal);
 
-  document.getElementById('closeModal').addEventListener('click', () => {
-    modal.remove();
-  });
+  document.getElementById('closeModal').onclick = () => modal.remove();
 
-  document.getElementById('saveHotel').addEventListener('click', async (e) => {
-    e.preventDefault();
+  document.getElementById('saveHotel').onclick = async () => {
+    const name = document.getElementById('hotelName').value.trim();
+    const location = document.getElementById('hotelLocation').value.trim();
+    const price = document.getElementById('hotelPrice').value.trim();
 
-   const nameInput = document.getElementById('hotelName');
-    const locationInput = document.getElementById('hotelLocation');
-    const priceInput = document.getElementById('hotelPrice');
-
-    const name = nameInput ? nameInput.value.trim() : '';
-    const locationValue = locationInput ? locationInput.value.trim() : '';
-    const price = priceInput ? priceInput.value.trim() : '';
-
-console.log({ name, locationValue, price });
-    if (!name || !locationValue || !price) {
+    if (!name || !location || !price) {
       alert('Completa todos los campos');
       return;
     }
@@ -211,13 +201,11 @@ console.log({ name, locationValue, price });
           'Content-Type': 'application/json',
           'Authorization': 'Bearer ' + token
         },
-        body: JSON.stringify({ name, location: locationValue, price })
+        body: JSON.stringify({ name, location, price })
       });
 
-      const data = await res.json();
-
       if (!res.ok) {
-        alert(data.message || 'No autorizado');
+        alert('Error creando hotel');
         return;
       }
 
@@ -226,12 +214,113 @@ console.log({ name, locationValue, price });
       loadHotels();
 
     } catch (error) {
-      alert('Error creando hotel');
+      alert('Error de conexión');
     }
-  });
+  };
 }
 
-// =======================
-// 🚀 Inicializar
-// =======================
+// ✏️ Editar hotel
+function editHotel(id, name, location, price) {
+
+  if (document.getElementById('adminModal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'adminModal';
+
+  modal.innerHTML = `
+    <div style="
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.6);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:1000;
+    ">
+      <div style="
+        background:white;
+        padding:25px;
+        border-radius:10px;
+        width:320px;
+      ">
+        <h3>Editar Hotel</h3>
+        <input id="editName" value="${name}" style="width:100%; margin-bottom:10px;" />
+        <input id="editLocation" value="${location}" style="width:100%; margin-bottom:10px;" />
+        <input id="editPrice" type="number" value="${price}" style="width:100%; margin-bottom:10px;" />
+        
+        <button id="updateHotel">Actualizar</button>
+        <button id="closeModal">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document.getElementById('closeModal').onclick = () => modal.remove();
+
+  document.getElementById('updateHotel').onclick = async () => {
+    const updatedName = document.getElementById('editName').value;
+    const updatedLocation = document.getElementById('editLocation').value;
+    const updatedPrice = document.getElementById('editPrice').value;
+
+    try {
+      const res = await fetch('/api/hotels/' + id, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          name: updatedName,
+          location: updatedLocation,
+          price: updatedPrice
+        })
+      });
+
+      if (!res.ok) {
+        alert('Error actualizando');
+        return;
+      }
+
+      alert('Hotel actualizado');
+      modal.remove();
+      loadHotels();
+
+    } catch (err) {
+      alert('Error de conexión');
+    }
+  };
+}
+
+// 🗑 Eliminar hotel
+async function deleteHotel(id) {
+
+  const confirmDelete = confirm('¿Seguro que quieres eliminar este hotel?');
+  if (!confirmDelete) return;
+
+  try {
+    const res = await fetch('/api/hotels/' + id, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+
+    if (!res.ok) {
+      alert('Error eliminando');
+      return;
+    }
+
+    alert('Hotel eliminado');
+    loadHotels();
+
+  } catch (err) {
+    alert('Error de conexión');
+  }
+}
+
+//  Inicializar
 loadHotels();

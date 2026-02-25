@@ -185,3 +185,27 @@ body {
   font-weight: bold;
   color: #111;
 }
+
+.hotel-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+
+.edit-btn {
+  background: #f59e0b;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.delete-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+}
