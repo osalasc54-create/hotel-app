@@ -132,10 +132,15 @@ async function reserveHotel(hotelId, hotelName) {
 
     if (!res.ok) {
       alert(data.message || 'Error al reservar');
-      return;
-    }
+     return;
+     }
 
-    alert('✅ Reserva confirmada');
+    alert(
+      `✅ Reserva confirmada\n\n` +
+     `Noches: ${data.nights}\n` +
+      `Precio por noche: $${data.price_per_night}\n` +
+     `Total a pagar: $${data.total_price}`
+      );    
 
   } catch (error) {
     alert('Error de conexión');
