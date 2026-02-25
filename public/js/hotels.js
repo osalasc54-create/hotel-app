@@ -102,7 +102,7 @@ async function loadHotels() {
   }
 }
 
-// 🔥 MODAL PROFESIONAL DE RESERVA
+// 🔥 MODAL RESERVA → AHORA CON PAGO
 function reserveHotel(hotelId, hotelName, pricePerNight) {
 
   if (document.getElementById('reservationModal')) return;
@@ -139,7 +139,7 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
 
         <div id="reservationSummary" style="margin-bottom:15px; font-weight:bold;"></div>
 
-        <button id="confirmReservation">Confirmar Reserva</button>
+        <button id="goToPayment">Proceder al pago</button>
         <button id="closeReservation">Cancelar</button>
       </div>
     </div>
@@ -150,6 +150,9 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
   const startInput = document.getElementById('startDate');
   const endInput = document.getElementById('endDate');
   const summary = document.getElementById('reservationSummary');
+
+  let nights = 0;
+  let total = 0;
 
   function updateCalculation() {
     if (!startInput.value || !endInput.value) {
@@ -166,8 +169,8 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
     }
 
     const diffTime = end - start;
-    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    const total = nights * pricePerNight;
+    nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    total = nights * pricePerNight;
 
     summary.innerHTML = `
       Noches: ${nights}<br>
@@ -181,13 +184,64 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
 
   document.getElementById('closeReservation').onclick = () => modal.remove();
 
-  document.getElementById('confirmReservation').onclick = async () => {
-
-    if (!startInput.value || !endInput.value) {
-      alert('Selecciona ambas fechas');
+  document.getElementById('goToPayment').onclick = () => {
+    if (!startInput.value || !endInput.value || nights <= 0) {
+      alert('Selecciona fechas válidas');
       return;
     }
 
+    showPaymentModal(hotelId, startInput.value, endInput.value, total);
+  };
+}
+
+// 💳 MODAL DE PAGO
+function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
+
+  if (document.getElementById('paymentModal')) return;
+
+  const paymentModal = document.createElement('div');
+  paymentModal.id = 'paymentModal';
+
+  paymentModal.innerHTML = `
+    <div style="
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.7);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:3000;
+    ">
+      <div style="
+        background:white;
+        padding:30px;
+        border-radius:12px;
+        width:400px;
+      ">
+        <h2>Pago Seguro</h2>
+
+        <p>Total a pagar: <strong>$${totalAmount}</strong></p>
+
+        <input placeholder="Número de tarjeta" style="width:100%; margin-bottom:10px;">
+        <input placeholder="MM/AA" style="width:48%; margin-bottom:10px;">
+        <input placeholder="CVC" style="width:48%; margin-bottom:10px; float:right;">
+
+        <button id="confirmPayment">Pagar ahora</button>
+        <button id="cancelPayment">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(paymentModal);
+
+  document.getElementById('cancelPayment').onclick = () => {
+    paymentModal.remove();
+  };
+
+  document.getElementById('confirmPayment').onclick = async () => {
     try {
       const res = await fetch('/api/reservations', {
         method: 'POST',
@@ -197,25 +251,26 @@ function reserveHotel(hotelId, hotelName, pricePerNight) {
         },
         body: JSON.stringify({
           hotel_id: hotelId,
-          start_date: startInput.value,
-          end_date: endInput.value
+          start_date: startDate,
+          end_date: endDate
         })
       });
 
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || 'Error al reservar');
+        alert(data.message || 'Error procesando pago');
         return;
       }
 
       alert(
-        `✅ Reserva confirmada\n\n` +
-        `Noches: ${data.nights}\n` +
+        `✅ Pago exitoso\n\n` +
+        `Reserva confirmada\n` +
         `Total pagado: $${data.total_price}`
       );
 
-      modal.remove();
+      document.getElementById('reservationModal')?.remove();
+      paymentModal.remove();
 
     } catch (error) {
       alert('Error de conexión');
