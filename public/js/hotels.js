@@ -71,18 +71,14 @@ async function loadHotels() {
     hotels.forEach(hotel => {
       container.innerHTML += `
         <div class="hotel-card">
-          <img 
-            src="${hotel.image_url || 'https://picsum.photos/400/300?random=' + hotel.id}"
-            onerror="this.src='https://picsum.photos/400/300?random=${hotel.id}'"
-          >
+          <img src="${hotel.image_url || 'https://picsum.photos/400/300?random=' + hotel.id}">
           <div class="hotel-info">
             <h3>${hotel.name}</h3>
             <p>${hotel.location}</p>
             <span>$${hotel.price} / noche</span>
 
             <div class="hotel-actions">
-              <button class="reserve-btn"
-                onclick="reserveHotel(${hotel.id}, '${hotel.name}')">
+              <button onclick="reserveHotel(${hotel.id}, '${hotel.name}', ${hotel.price})">
                 Reservar
               </button>
 
@@ -106,50 +102,129 @@ async function loadHotels() {
   }
 }
 
-//  Reservar hotel
-async function reserveHotel(hotelId, hotelName) {
-  const startDate = prompt(`Fecha de entrada para ${hotelName} (YYYY-MM-DD)`);
-  if (!startDate) return;
+// 🔥 MODAL PROFESIONAL DE RESERVA
+function reserveHotel(hotelId, hotelName, pricePerNight) {
 
-  const endDate = prompt(`Fecha de salida para ${hotelName} (YYYY-MM-DD)`);
-  if (!endDate) return;
+  if (document.getElementById('reservationModal')) return;
 
-  try {
-    const res = await fetch('/api/reservations', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer ' + token
-      },
-      body: JSON.stringify({
-        hotel_id: hotelId,
-        start_date: startDate,
-        end_date: endDate
-      })
-    });
+  const modal = document.createElement('div');
+  modal.id = 'reservationModal';
 
-    const data = await res.json();
+  modal.innerHTML = `
+    <div style="
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.6);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:2000;
+    ">
+      <div style="
+        background:white;
+        padding:30px;
+        border-radius:12px;
+        width:400px;
+      ">
+        <h2>${hotelName}</h2>
 
-    if (!res.ok) {
-      alert(data.message || 'Error al reservar');
-     return;
-     }
+        <label>Fecha de entrada</label>
+        <input type="date" id="startDate" style="width:100%; margin-bottom:10px;">
 
-    alert(
-      `✅ Reserva confirmada\n\n` +
-     `Noches: ${data.nights}\n` +
-      `Precio por noche: $${data.price_per_night}\n` +
-     `Total a pagar: $${data.total_price}`
-      );    
+        <label>Fecha de salida</label>
+        <input type="date" id="endDate" style="width:100%; margin-bottom:15px;">
 
-  } catch (error) {
-    alert('Error de conexión');
+        <div id="reservationSummary" style="margin-bottom:15px; font-weight:bold;"></div>
+
+        <button id="confirmReservation">Confirmar Reserva</button>
+        <button id="closeReservation">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const startInput = document.getElementById('startDate');
+  const endInput = document.getElementById('endDate');
+  const summary = document.getElementById('reservationSummary');
+
+  function updateCalculation() {
+    if (!startInput.value || !endInput.value) {
+      summary.innerHTML = '';
+      return;
+    }
+
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+
+    if (end <= start) {
+      summary.innerHTML = 'La fecha de salida debe ser posterior';
+      return;
+    }
+
+    const diffTime = end - start;
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    const total = nights * pricePerNight;
+
+    summary.innerHTML = `
+      Noches: ${nights}<br>
+      Precio por noche: $${pricePerNight}<br>
+      Total estimado: $${total}
+    `;
   }
+
+  startInput.addEventListener('change', updateCalculation);
+  endInput.addEventListener('change', updateCalculation);
+
+  document.getElementById('closeReservation').onclick = () => modal.remove();
+
+  document.getElementById('confirmReservation').onclick = async () => {
+
+    if (!startInput.value || !endInput.value) {
+      alert('Selecciona ambas fechas');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/reservations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          hotel_id: hotelId,
+          start_date: startInput.value,
+          end_date: endInput.value
+        })
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.message || 'Error al reservar');
+        return;
+      }
+
+      alert(
+        `✅ Reserva confirmada\n\n` +
+        `Noches: ${data.nights}\n` +
+        `Total pagado: $${data.total_price}`
+      );
+
+      modal.remove();
+
+    } catch (error) {
+      alert('Error de conexión');
+    }
+  };
 }
 
 //  Modal Crear Hotel
 function showCreateForm() {
-
   if (document.getElementById('adminModal')) return;
 
   const modal = document.createElement('div');
@@ -226,7 +301,6 @@ function showCreateForm() {
 
 // ✏️ Editar hotel
 function editHotel(id, name, location, price) {
-
   if (document.getElementById('adminModal')) return;
 
   const modal = document.createElement('div');
@@ -302,7 +376,6 @@ function editHotel(id, name, location, price) {
 
 // 🗑 Eliminar hotel
 async function deleteHotel(id) {
-
   const confirmDelete = confirm('¿Seguro que quieres eliminar este hotel?');
   if (!confirmDelete) return;
 
@@ -327,5 +400,4 @@ async function deleteHotel(id) {
   }
 }
 
-//  Inicializar
 loadHotels();
