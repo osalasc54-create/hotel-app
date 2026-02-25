@@ -12,7 +12,6 @@
   <button id="logout">Cerrar sesión</button>
 </header>
 
-<!-- 🔥 PANEL ADMIN -->
 <section id="adminPanel" style="display:none; padding:20px; background:#f4f4f4;">
   <h3>Panel de Administración</h3>
   <button onclick="mostrarFormulario()">Crear Nuevo Hotel</button>
@@ -26,12 +25,13 @@
 </section>
 
 <main class="hotel-grid" id="hotelList">
-  <!-- aquí se insertan las cards -->
 </main>
 
-<script src="js/hotels.js"></script>
-
+<!-- 🔥 Stripe primero -->
 <script src="https://js.stripe.com/v3/"></script>
+
+<!-- 🔥 Luego tu JS -->
+<script src="js/hotels.js"></script>
 
 </body>
 </html>
