@@ -6,6 +6,7 @@ const path = require('path');
 const authRoutes = require('./routes/auth.routes');
 const hotelRoutes = require('./routes/hotel.routes');
 const reservationRoutes = require('./routes/reservation.routes');
+const paymentRoutes = require('./routes/payment.routes'); // ✅ NUEVO
 
 const app = express();
 
@@ -19,6 +20,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 app.use('/api/auth', authRoutes);
 app.use('/api/hotels', hotelRoutes);
 app.use('/api/reservations', reservationRoutes);
+app.use('/api/payments', paymentRoutes); // ✅ NUEVA RUTA STRIPE
 
 app.get('/', (req, res) => {
   res.json({ message: 'API Hotel funcionando correctamente' });
