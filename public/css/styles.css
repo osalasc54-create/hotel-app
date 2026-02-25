@@ -4,8 +4,34 @@
 
 body {
   margin: 0;
+  padding: 0;
+  height: 100vh;
+
+  background-image: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+
+  display: flex;
+  justify-content: center;
+  align-items: center;
   font-family: 'Segoe UI', sans-serif;
-  background: linear-gradient(120deg, #4f46e5, #6366f1);
+}
+
+/* Overlay oscuro elegante */
+body::before {
+  content: "";
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  background: rgba(0,0,0,0.45);
+  z-index: 0;
+}
+
+/* Asegurar que el card esté arriba */
+.login-container {
+  position: relative;
+  z-index: 1;
 }
 
 .auth-body {
