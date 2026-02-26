@@ -1,6 +1,9 @@
 const db = require('../config/db');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const { OAuth2Client } = require('google-auth-library');
+
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 /* =========================
    REGISTER
@@ -86,7 +89,7 @@ exports.login = async (req, res) => {
       {
         id: user.id,
         email: user.email,
-        role: user.role   // 🔥 IMPORTANTE
+        role: user.role
       },
       process.env.JWT_SECRET,
       { expiresIn: '1h' }
@@ -101,6 +104,80 @@ exports.login = async (req, res) => {
     console.error('LOGIN ERROR REAL:', error);
     res.status(500).json({
       message: 'Error al iniciar sesión'
+    });
+  }
+};
+
+/* =========================
+   GOOGLE LOGIN
+========================= */
+exports.googleLogin = async (req, res) => {
+  try {
+    const { token } = req.body;
+
+    if (!token) {
+      return res.status(400).json({
+        message: 'Token de Google requerido'
+      });
+    }
+
+    if (!process.env.GOOGLE_CLIENT_ID) {
+      console.error('GOOGLE_CLIENT_ID no definido');
+      return res.status(500).json({
+        message: 'Error de configuración del servidor'
+      });
+    }
+
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+      audience: process.env.GOOGLE_CLIENT_ID
+    });
+
+    const payload = ticket.getPayload();
+    const { email, name } = payload;
+
+    const [rows] = await db.query(
+      'SELECT id, email, role FROM users WHERE email = ?',
+      [email]
+    );
+
+    let user;
+
+    if (rows.length === 0) {
+      const [result] = await db.query(
+        'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+        [name, email, null, 'user']
+      );
+
+      const [newUser] = await db.query(
+        'SELECT id, email, role FROM users WHERE id = ?',
+        [result.insertId]
+      );
+
+      user = newUser[0];
+    } else {
+      user = rows[0];
+    }
+
+    const jwtToken = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        role: user.role
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '1h' }
+    );
+
+    res.json({
+      token: jwtToken,
+      role: user.role
+    });
+
+  } catch (error) {
+    console.error('GOOGLE LOGIN ERROR:', error);
+    res.status(401).json({
+      message: 'Error al autenticar con Google'
     });
   }
 };
