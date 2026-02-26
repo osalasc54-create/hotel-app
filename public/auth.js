@@ -4,8 +4,8 @@ if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    const email = document.getElementById('email').value;
-    const password = document.getElementById('password').value;
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value.trim();
 
     try {
       const res = await fetch('/api/auth/login', {
@@ -17,21 +17,44 @@ if (loginForm) {
       const data = await res.json();
 
       if (!res.ok) {
-        alert(data.message || 'Error al iniciar sesión');
+        alert(data.message || 'Credenciales incorrectas');
         return;
       }
 
-      // guardar token
       localStorage.setItem('token', data.token);
-      const decoded = JSON.parse(atob(data.token.split('.')[1]));
-
-      localStorage.setItem('role', decoded.role);
-
-      // redirigir
       window.location.href = 'index.html';
 
     } catch (error) {
-      alert('Error de conexión con el servidor');
+      alert('Error de conexión');
     }
+  });
+}
+
+/* =========================
+   GOOGLE LOGIN
+========================= */
+
+function handleCredentialResponse(response) {
+  fetch('/api/auth/google', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      token: response.credential
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.token) {
+      alert('Error al autenticar con Google');
+      return;
+    }
+
+    localStorage.setItem('token', data.token);
+    window.location.href = 'index.html';
+  })
+  .catch(() => {
+    alert('Error al conectar con el servidor');
   });
 }

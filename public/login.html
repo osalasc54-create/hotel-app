@@ -4,9 +4,11 @@
   <meta charset="UTF-8">
   <title>Iniciar sesión</title>
   <link rel="stylesheet" href="css/styles.css">
+
+  <!-- 🔥 SCRIPT OFICIAL DE GOOGLE -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
-<!-- 🔥 SOLO AGREGAMOS login-page AQUÍ -->
 <body class="login-page auth-body">
 
   <div class="auth-card">
@@ -16,9 +18,23 @@
     <form id="loginForm">
       <input type="email" id="email" placeholder="Correo electrónico" required>
       <input type="password" id="password" placeholder="Contraseña" required>
-
       <button type="submit">Entrar</button>
     </form>
+
+    <!-- 🔥 BOTÓN GOOGLE -->
+    <div id="g_id_onload"
+         data-client_id="188558075505-c6al4sge3eri4l09ngqnc141i3e3c4ld.apps.googleusercontent.com"
+         data-callback="handleCredentialResponse">
+    </div>
+
+    <div class="g_id_signin"
+         data-type="standard"
+         data-size="large"
+         data-theme="outline"
+         data-text="continue_with"
+         data-shape="rectangular"
+         data-logo_alignment="left">
+    </div>
 
     <p class="switch">
       ¿No tienes cuenta?
