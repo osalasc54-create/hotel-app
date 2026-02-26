@@ -1,5 +1,9 @@
 const loginForm = document.getElementById('loginForm');
 
+/* =========================
+   LOGIN NORMAL
+========================= */
+
 if (loginForm) {
   loginForm.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -29,3 +33,33 @@ if (loginForm) {
     }
   });
 }
+
+/* =========================
+   GOOGLE LOGIN (IMPORTANTE)
+========================= */
+
+window.handleCredentialResponse = function (response) {
+  fetch('/api/auth/google', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      token: response.credential
+    })
+  })
+  .then(res => res.json())
+  .then(data => {
+    if (!data.token) {
+      alert(data.message || 'Error al autenticar con Google');
+      return;
+    }
+
+    localStorage.setItem('token', data.token);
+    window.location.href = 'index.html';
+  })
+  .catch(err => {
+    console.error(err);
+    alert('Error al conectar con el servidor');
+  });
+};
