@@ -115,3 +115,35 @@ exports.getReservationsByHotel = async (req, res) => {
     });
   }
 };
+
+// ===============================
+// OBTENER MIS RESERVAS
+// ===============================
+
+exports.getMyReservations = async (req, res) => {
+  try {
+
+    const db = require('../config/db'); // usa tu conexión real si es diferente
+
+    const [rows] = await db.query(`
+      SELECT 
+        r.id,
+        r.start_date,
+        r.end_date,
+        r.total_price,
+        r.created_at,
+        h.name,
+        h.location
+      FROM reservations r
+      JOIN hotels h ON r.hotel_id = h.id
+      WHERE r.user_id = ?
+      ORDER BY r.created_at DESC
+    `, [req.user.id]);
+
+    res.json(rows);
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error obteniendo reservaciones' });
+  }
+};
