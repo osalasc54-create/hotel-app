@@ -144,7 +144,7 @@ exports.googleLogin = async (req, res) => {
 
       const [result] = await db.query(
         'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-        [name, email, randomPassword, 'user']
+        [name, email, randomPassword, 'normal']
       );
 
       const [newUserRows] = await db.query(
