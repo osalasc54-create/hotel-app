@@ -104,7 +104,6 @@ body {
   font-weight: 600;
 }
 
-
 /* =========================
    AIRBNB STYLE – HOTELES
    ========================= */
@@ -232,7 +231,7 @@ body {
 .hotel-modal {
   display: none;
   position: fixed;
-  z-index: 5000;
+  z-index: 1000; /* 🔥 BAJAMOS EL Z-INDEX PARA QUE NO TAPE EL MODAL DE RESERVA */
   left: 0;
   top: 0;
   width: 100%;
