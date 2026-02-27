@@ -137,10 +137,23 @@ exports.googleLogin = async (req, res) => {
     let user;
 
     if (rows.length === 0) {
-      const [result] = await db.query(
-        'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
-        [name, email, null, 'user']
-      );
+  const randomPassword = await bcrypt.hash(
+    Math.random().toString(36),
+    10
+  );
+
+  const [result] = await db.query(
+    'INSERT INTO users (name, email, password, role) VALUES (?, ?, ?, ?)',
+    [name, email, randomPassword, 'user']
+  );
+
+  const [newUser] = await db.query(
+    'SELECT id, email, role FROM users WHERE id = ?',
+    [result.insertId]
+  );
+
+  user = newUser[0];
+}
 
       const [newUser] = await db.query(
         'SELECT id, email, role FROM users WHERE id = ?',
