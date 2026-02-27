@@ -6,8 +6,11 @@ const authMiddleware = require('../middlewares/auth.middleware');
 // Crear reserva
 router.post('/', authMiddleware, reservationController.createReservation);
 
-// 🔥 NUEVO → Obtener mis reservas
+// Obtener mis reservas
 router.get('/my', authMiddleware, reservationController.getMyReservations);
+
+// 🔥 NUEVO → Cancelar reserva
+router.delete('/:id', authMiddleware, reservationController.cancelReservation);
 
 // Obtener reservas por hotel
 router.get(

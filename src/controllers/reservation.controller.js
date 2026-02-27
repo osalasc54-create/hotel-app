@@ -147,3 +147,37 @@ exports.getMyReservations = async (req, res) => {
     res.status(500).json({ message: 'Error obteniendo reservaciones' });
   }
 };
+
+// ===============================
+// CANCELAR RESERVA
+// ===============================
+
+exports.cancelReservation = async (req, res) => {
+  try {
+
+    const db = require('../config/db');
+    const reservationId = req.params.id;
+
+    // 1️⃣ Verificar que exista y pertenezca al usuario
+    const [rows] = await db.query(
+      'SELECT * FROM reservations WHERE id = ? AND user_id = ?',
+      [reservationId, req.user.id]
+    );
+
+    if (!rows.length) {
+      return res.status(404).json({ message: 'Reserva no encontrada' });
+    }
+
+    // 2️⃣ Eliminar reserva
+    await db.query(
+      'DELETE FROM reservations WHERE id = ?',
+      [reservationId]
+    );
+
+    res.json({ message: 'Reserva cancelada correctamente' });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Error cancelando reserva' });
+  }
+};

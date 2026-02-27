@@ -499,20 +499,69 @@ function showReservationsModal(reservations) {
     const end = r.end_date.split('T')[0];
 
     container.innerHTML += `
-      <div style="
-        border:1px solid #eee;
-        padding:12px;
-        margin-bottom:12px;
-        border-radius:8px;
+  <div style="
+    border:1px solid #eee;
+    padding:12px;
+    margin-bottom:12px;
+    border-radius:8px;
+  ">
+    <strong>${r.name}</strong><br>
+    Ubicación: ${r.location}<br>
+    Entrada: ${start}<br>
+    Salida: ${end}<br>
+    Total pagado: $${r.total_price}<br><br>
+    <button onclick="cancelReservation(${r.id})"
+      style="
+        background:#ef4444;
+        color:white;
+        border:none;
+        padding:6px 12px;
+        border-radius:6px;
+        cursor:pointer;
       ">
-        <strong>${r.name}</strong><br>
-        Ubicación: ${r.location}<br>
-        Entrada: ${start}<br>
-        Salida: ${end}<br>
-        Total pagado: $${r.total_price}
-      </div>
-    `;
+      Cancelar reserva
+    </button>
+  </div>
+`;
   });
+}
+
+// =============================
+// CANCELAR RESERVA FRONTEND
+// =============================
+
+async function cancelReservation(reservationId) {
+
+  const confirmCancel = confirm('¿Seguro que quieres cancelar esta reserva?');
+
+  if (!confirmCancel) return;
+
+  try {
+    const res = await fetch('/api/reservations/' + reservationId, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || 'Error cancelando reserva');
+      return;
+    }
+
+    alert('Reserva cancelada correctamente');
+
+    // Cerrar modal actual
+    document.getElementById('myReservationsModal')?.remove();
+
+    // Volver a abrir actualizado
+    viewMyReservations();
+
+  } catch (error) {
+    alert('Error de conexión');
+  }
 }
 
 loadHotels();
