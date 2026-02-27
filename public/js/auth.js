@@ -45,7 +45,7 @@ window.handleCredentialResponse = function (response) {
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
-      token: response.credential
+      credential: response.credential
     })
   })
   .then(res => res.json())

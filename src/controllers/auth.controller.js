@@ -113,23 +113,16 @@ exports.login = async (req, res) => {
 ========================= */
 exports.googleLogin = async (req, res) => {
   try {
-    const { token } = req.body;
+    const { credential } = req.body;
 
-    if (!token) {
+    if (!credential) {
       return res.status(400).json({
         message: 'Token de Google requerido'
       });
     }
 
-    if (!process.env.GOOGLE_CLIENT_ID) {
-      console.error('GOOGLE_CLIENT_ID no definido');
-      return res.status(500).json({
-        message: 'Error de configuración del servidor'
-      });
-    }
-
     const ticket = await client.verifyIdToken({
-      idToken: token,
+      idToken: credential,
       audience: process.env.GOOGLE_CLIENT_ID
     });
 
@@ -175,7 +168,7 @@ exports.googleLogin = async (req, res) => {
     });
 
   } catch (error) {
-    console.error('GOOGLE LOGIN ERROR:', error);
+    console.error('GOOGLE LOGIN ERROR REAL:', error);
     res.status(401).json({
       message: 'Error al autenticar con Google'
     });
