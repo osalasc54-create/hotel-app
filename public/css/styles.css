@@ -197,3 +197,29 @@ body {
   border-radius: 6px;
   cursor: pointer;
 }
+
+/* ==================== LOGO ROOMLY ==================== */
+.logo-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 20px;
+  animation: slideDown .8s ease;
+}
+
+.roomly-logo {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 8px rgba(0,0,0,.1));
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
