@@ -423,4 +423,96 @@ document.addEventListener('click', function(e) {
   }
 });
 
+// =============================
+// VER MIS RESERVAS
+// =============================
+
+async function viewMyReservations() {
+  try {
+    const res = await fetch('/api/reservations/my', {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      }
+    });
+
+    const reservations = await res.json();
+
+    if (!res.ok) {
+      alert('Error obteniendo reservaciones');
+      return;
+    }
+
+    showReservationsModal(reservations);
+
+  } catch (error) {
+    alert('Error de conexión');
+  }
+}
+
+function showReservationsModal(reservations) {
+  if (document.getElementById('myReservationsModal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'myReservationsModal';
+
+  modal.innerHTML = `
+    <div style="
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.7);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:6000;
+    ">
+      <div style="
+        background:white;
+        width:600px;
+        max-height:80vh;
+        overflow:auto;
+        padding:25px;
+        border-radius:12px;
+      ">
+        <h2>Mis Reservaciones</h2>
+        <div id="reservationsList"></div>
+        <button onclick="document.getElementById('myReservationsModal').remove()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const container = document.getElementById('reservationsList');
+
+  if (!reservations.length) {
+    container.innerHTML = '<p>No tienes reservaciones aún.</p>';
+    return;
+  }
+
+  reservations.forEach(r => {
+    const start = r.start_date.split('T')[0];
+    const end = r.end_date.split('T')[0];
+
+    container.innerHTML += `
+      <div style="
+        border:1px solid #eee;
+        padding:12px;
+        margin-bottom:12px;
+        border-radius:8px;
+      ">
+        <strong>${r.name}</strong><br>
+        Ubicación: ${r.location}<br>
+        Entrada: ${start}<br>
+        Salida: ${end}<br>
+        Total pagado: $${r.total_price}
+      </div>
+    `;
+  });
+}
+
 loadHotels();
