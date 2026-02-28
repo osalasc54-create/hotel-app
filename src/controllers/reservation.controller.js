@@ -74,6 +74,15 @@ exports.createReservation = async (req, res) => {
 
     const pricePerNight = hotelRows[0].price;
 
+    // 🔥 NUEVA VALIDACIÓN: máximo 2 huéspedes por habitación
+    const minRoomsRequired = Math.ceil(guests / 2);
+
+    if (rooms < minRoomsRequired) {
+      return res.status(400).json({
+        message: `Se requieren mínimo ${minRoomsRequired} habitaciones para ${guests} huéspedes`
+      });
+    }
+
     // ✅ Nuevo cálculo considerando habitaciones
     const total = pricePerNight * nights * rooms;
 
