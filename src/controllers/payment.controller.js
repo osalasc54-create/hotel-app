@@ -73,11 +73,26 @@ exports.createPaymentIntent = async (req, res) => {
       return res.status(400).json({ message: 'Datos insuficientes' });
     }
 
-    const total = pricePerNight * nights * rooms;
+    // 🔥 Siempre calcular internamente en MXN
+    const totalMXN = pricePerNight * nights * rooms;
+
+    // 🔥 Tipo de cambio fijo (puedes hacerlo dinámico después)
+    const EXCHANGE_RATE = 17;
+
+    let finalAmount;
+    let stripeCurrency;
+
+    if (currency === 'usd') {
+      finalAmount = (totalMXN / EXCHANGE_RATE) * 100;
+      stripeCurrency = 'usd';
+    } else {
+      finalAmount = totalMXN * 100;
+      stripeCurrency = 'mxn';
+    }
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(total * 100),
-      currency: currency,
+      amount: Math.round(finalAmount),
+      currency: stripeCurrency,
       metadata: {
         hotel_id: hotel_id || '',
         reservation_id: reservation_id || '',
@@ -91,7 +106,7 @@ exports.createPaymentIntent = async (req, res) => {
 
     res.json({
       clientSecret: paymentIntent.client_secret,
-      total,
+      total: totalMXN, // siempre regresamos el total base en MXN
       nights
     });
 
