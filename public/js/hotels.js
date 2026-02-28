@@ -133,35 +133,53 @@ async function reserveHotel(hotelId, hotelName, pricePerNight) {
     }); 
   } 
 
-  function updateCalculation() { 
-    if (!startInput.value || !endInput.value) { 
-      summary.innerHTML = ''; 
-      return; 
-    } 
-    const start = new Date(startInput.value); 
-    const end = new Date(endInput.value); 
-    if (end <= start) { 
-      summary.innerHTML = 'La fecha de salida debe ser posterior'; 
-      return; 
-    } 
-    // 🔴 Validar solapamiento visual 
-    if (isDateBlocked(start, end)) { 
-      summary.innerHTML = 'Esas fechas ya están reservadas'; 
-      return; 
-    } 
-    const diffTime = end - start; 
-    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    const guests = parseInt(document.getElementById('guests').value) || 1;
-    const rooms = parseInt(document.getElementById('rooms').value) || 1;
+  function updateCalculation() {
+
+    if (!startInput.value || !endInput.value) {
+      summary.innerHTML = '';
+      return;
+    }
+
+    const start = new Date(startInput.value);
+    const end = new Date(endInput.value);
+
+    if (end <= start) {
+      summary.innerHTML = 'La fecha de salida debe ser posterior';
+      return;
+    }
+
+    if (isDateBlocked(start, end)) {
+      summary.innerHTML = 'Esas fechas ya están reservadas';
+      return;
+    }
+
+    const diffTime = end - start;
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    const guestsInput = document.getElementById('guests');
+    const roomsInput = document.getElementById('rooms');
+
+    const guests = parseInt(guestsInput.value) || 1;
+    let rooms = parseInt(roomsInput.value) || 1;
+
+    // 🔥 Regla: máximo 2 huéspedes por habitación
+    const minRoomsRequired = Math.ceil(guests / 2);
+
+    if (rooms < minRoomsRequired) {
+      rooms = minRoomsRequired;
+      roomsInput.value = rooms;
+    }
+
     const total = nights * pricePerNight * rooms;
+
     summary.innerHTML = `
-  Noches: ${nights}<br>
-  Habitaciones: ${rooms}<br>
-  Huéspedes: ${guests}<br>
-  Precio por noche: $${pricePerNight}<br>
-  Total estimado: $${total}
-`;
-  } 
+      Noches: ${nights}<br>
+      Habitaciones: ${rooms}<br>
+      Huéspedes: ${guests}<br>
+      Precio por noche: $${pricePerNight}<br>
+      Total estimado: $${total}
+    `;
+  }
 
   startInput.addEventListener('change', updateCalculation); 
   endInput.addEventListener('change', updateCalculation); 
