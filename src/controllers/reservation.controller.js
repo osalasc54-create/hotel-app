@@ -203,3 +203,107 @@ exports.cancelReservation = async (req, res) => {
     res.status(500).json({ message: 'Error cancelando reserva' });
   }
 };
+
+// ===============================
+// ACTUALIZAR RESERVA
+// ===============================
+
+exports.updateReservation = async (req, res) => {
+
+  const { start_date, end_date, guests = 1, rooms = 1 } = req.body;
+
+  try {
+
+    const reservationId = req.params.id;
+
+    // 1️⃣ Verificar que exista y pertenezca al usuario
+    const [existing] = await db.query(
+      'SELECT * FROM reservations WHERE id = ? AND user_id = ?',
+      [reservationId, req.user.id]
+    );
+
+    if (!existing.length) {
+      return res.status(404).json({ message: 'Reserva no encontrada' });
+    }
+
+    const hotel_id = existing[0].hotel_id;
+
+    const start = new Date(start_date);
+    const end = new Date(end_date);
+
+    // ❌ Validar rango lógico
+    if (end <= start) {
+      return res.status(400).json({
+        message: 'La fecha de salida debe ser posterior'
+      });
+    }
+
+    // ❌ Verificar solapamiento (excluyendo la misma reserva)
+    const [conflicts] = await db.query(
+      `
+      SELECT id FROM reservations
+      WHERE hotel_id = ?
+      AND id != ?
+      AND NOT (
+        end_date <= ?
+        OR start_date >= ?
+      )
+      `,
+      [hotel_id, reservationId, start_date, end_date]
+    );
+
+    if (conflicts.length > 0) {
+      return res.status(400).json({
+        message: 'El hotel ya está reservado en esas fechas'
+      });
+    }
+
+    // 🔥 Calcular noches
+    const diffTime = end - start;
+    const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
+    // 🔥 Obtener precio actual
+    const [hotelRows] = await db.query(
+      `SELECT price FROM hotels WHERE id = ?`,
+      [hotel_id]
+    );
+
+    const pricePerNight = hotelRows[0].price;
+
+    // 🔥 VALIDACIÓN: máximo 2 huéspedes por habitación
+    const minRoomsRequired = Math.ceil(guests / 2);
+
+    if (rooms < minRoomsRequired) {
+      return res.status(400).json({
+        message: `Se requieren mínimo ${minRoomsRequired} habitaciones para ${guests} huéspedes`
+      });
+    }
+
+    // 🔥 Recalcular total
+    const total = pricePerNight * nights * rooms;
+
+    // 🔥 Actualizar reserva
+    await db.query(
+      `
+      UPDATE reservations
+      SET start_date = ?, end_date = ?, guests = ?, rooms = ?, total_price = ?
+      WHERE id = ?
+      `,
+      [start_date, end_date, guests, rooms, total, reservationId]
+    );
+
+    res.json({
+      message: 'Reserva actualizada',
+      nights,
+      guests,
+      rooms,
+      total_price: total
+    });
+
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      message: 'Error actualizando reserva'
+    });
+  }
+};

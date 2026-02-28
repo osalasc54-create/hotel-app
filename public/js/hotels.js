@@ -550,7 +550,23 @@ function showReservationsModal(reservations) {
     Ubicación: ${r.location}<br>
     Entrada: ${start}<br>
     Salida: ${end}<br>
+    Huéspedes: ${r.guests}<br>
+    Habitaciones: ${r.rooms}<br>
     Total pagado: $${r.total_price}<br><br>
+
+    <button onclick="editReservation(${r.id}, '${start}', '${end}', ${r.guests}, ${r.rooms})"
+      style="
+        background:#3b82f6;
+        color:white;
+        border:none;
+        padding:6px 12px;
+        border-radius:6px;
+        cursor:pointer;
+        margin-right:8px;
+      ">
+      Modificar
+    </button>
+
     <button onclick="cancelReservation(${r.id})"
       style="
         background:#ef4444;
@@ -598,6 +614,102 @@ async function cancelReservation(reservationId) {
     document.getElementById('myReservationsModal')?.remove();
 
     // Volver a abrir actualizado
+    viewMyReservations();
+
+  } catch (error) {
+    alert('Error de conexión');
+  }
+}
+
+function editReservation(id, startDate, endDate, guests, rooms) {
+
+  if (document.getElementById('editReservationModal')) return;
+
+  const modal = document.createElement('div');
+  modal.id = 'editReservationModal';
+
+  modal.innerHTML = `
+    <div style="
+      position:fixed;
+      top:0;
+      left:0;
+      width:100%;
+      height:100%;
+      background:rgba(0,0,0,0.7);
+      display:flex;
+      justify-content:center;
+      align-items:center;
+      z-index:7000;
+    ">
+      <div style="
+        background:white;
+        padding:25px;
+        border-radius:12px;
+        width:400px;
+      ">
+        <h3>Modificar reserva</h3>
+
+        <label>Fecha entrada</label>
+        <input type="date" id="editStart" value="${startDate}" style="width:100%; margin-bottom:10px;">
+
+        <label>Fecha salida</label>
+        <input type="date" id="editEnd" value="${endDate}" style="width:100%; margin-bottom:10px;">
+
+        <label>Huéspedes</label>
+        <input type="number" id="editGuests" value="${guests}" min="1" style="width:100%; margin-bottom:10px;">
+
+        <label>Habitaciones</label>
+        <input type="number" id="editRooms" value="${rooms}" min="1" style="width:100%; margin-bottom:15px;">
+
+        <button onclick="updateReservation(${id})">Continuar al pago</button>
+        <button onclick="document.getElementById('editReservationModal').remove()">Cancelar</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+}
+
+async function updateReservation(reservationId) {
+
+  const startDate = document.getElementById('editStart').value;
+  const endDate = document.getElementById('editEnd').value;
+  const guests = parseInt(document.getElementById('editGuests').value) || 1;
+  const rooms = parseInt(document.getElementById('editRooms').value) || 1;
+
+  if (!startDate || !endDate) {
+    alert('Selecciona fechas válidas');
+    return;
+  }
+
+  try {
+
+    const response = await fetch('/api/reservations/' + reservationId, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer ' + token
+      },
+      body: JSON.stringify({
+        start_date: startDate,
+        end_date: endDate,
+        guests,
+        rooms
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      alert(data.message || 'Error actualizando reserva');
+      return;
+    }
+
+    alert('Reserva actualizada. Nuevo total: $' + data.total_price);
+
+    document.getElementById('editReservationModal')?.remove();
+    document.getElementById('myReservationsModal')?.remove();
+
     viewMyReservations();
 
   } catch (error) {
