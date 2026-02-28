@@ -100,6 +100,10 @@ async function reserveHotel(hotelId, hotelName, pricePerNight) {
         <input type="date" id="startDate" style="width:100%; margin-bottom:10px;">
         <label>Fecha de salida</label>
         <input type="date" id="endDate" style="width:100%; margin-bottom:15px;">
+        <label>Huéspedes</label>
+        <input type="number" id="guests" min="1" value="1" style="width:100%; margin-bottom:10px;">
+        <label>Habitaciones</label>
+        <input type="number" id="rooms" min="1" value="1" style="width:100%; margin-bottom:15px;">
         <div id="reservationSummary" style="margin-bottom:15px; font-weight:bold;"></div>
         <button id="goToPayment">Proceder al pago</button>
         <button id="closeReservation">Cancelar</button>
@@ -147,12 +151,22 @@ async function reserveHotel(hotelId, hotelName, pricePerNight) {
     } 
     const diffTime = end - start; 
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    const total = nights * pricePerNight; 
-    summary.innerHTML = `Noches: ${nights}<br> Precio por noche: $${pricePerNight}<br> Total estimado: $${total}`; 
+    const guests = parseInt(document.getElementById('guests').value) || 1;
+    const rooms = parseInt(document.getElementById('rooms').value) || 1;
+    const total = nights * pricePerNight * rooms;
+    summary.innerHTML = `
+  Noches: ${nights}<br>
+  Habitaciones: ${rooms}<br>
+  Huéspedes: ${guests}<br>
+  Precio por noche: $${pricePerNight}<br>
+  Total estimado: $${total}
+`;
   } 
 
   startInput.addEventListener('change', updateCalculation); 
   endInput.addEventListener('change', updateCalculation); 
+  document.getElementById('guests').addEventListener('change', updateCalculation);
+  document.getElementById('rooms').addEventListener('change', updateCalculation);
 
   document.getElementById('closeReservation').onclick = () => modal.remove(); 
 
@@ -170,8 +184,13 @@ async function reserveHotel(hotelId, hotelName, pricePerNight) {
     // ✅ Cálculo del total y llamada correcta con 4 parámetros 
     const diffTime = end - start; 
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-    const total = nights * pricePerNight; 
-    showPaymentModal(hotelId, startInput.value, endInput.value, total); 
+
+    const guests = parseInt(document.getElementById('guests').value) || 1;
+    const rooms = parseInt(document.getElementById('rooms').value) || 1;
+
+    const total = nights * pricePerNight * rooms;
+
+    showPaymentModal(hotelId, startInput.value, endInput.value, total);
   }; 
 } 
 
@@ -210,7 +229,9 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
     body: JSON.stringify({ 
       hotel_id: hotelId, 
       start_date: startDate, 
-      end_date: endDate 
+      end_date: endDate,
+      guests: parseInt(document.getElementById('guests').value) || 1,
+      rooms: parseInt(document.getElementById('rooms').value) || 1
     }) 
   }); 
   const data = await response.json(); 
@@ -255,11 +276,13 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
           'Content-Type': 'application/json', 
           'Authorization': 'Bearer ' + token 
         }, 
-        body: JSON.stringify({ 
+       body: JSON.stringify({ 
           hotel_id: hotelId, 
-          start_date: startDate, 
-          end_date: endDate 
-        }) 
+         start_date: startDate, 
+         end_date: endDate,
+         guests: parseInt(document.getElementById('guests').value) || 1,
+          rooms: parseInt(document.getElementById('rooms').value) || 1
+        })
       }); 
       const reservationData = await reservationResponse.json(); 
       if (!reservationResponse.ok) { 

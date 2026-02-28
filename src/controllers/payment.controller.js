@@ -4,11 +4,18 @@ const db = require('../config/db');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 exports.createPaymentIntent = async (req, res) => {
-  const { hotel_id, start_date, end_date } = req.body;
+  const { hotel_id, start_date, end_date, guests = 1, rooms = 1 } = req.body;
 
   try {
     if (!hotel_id || !start_date || !end_date) {
       return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    // ✅ Validar huéspedes y habitaciones
+    if (guests < 1 || rooms < 1) {
+      return res.status(400).json({
+        message: 'Valores inválidos'
+      });
     }
 
     const start = new Date(start_date);
@@ -31,7 +38,9 @@ exports.createPaymentIntent = async (req, res) => {
     }
 
     const pricePerNight = hotelRows[0].price;
-    const total = pricePerNight * nights;
+
+    // ✅ MISMO cálculo que reservations
+    const total = pricePerNight * nights * rooms;
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100), // Stripe trabaja en centavos
@@ -40,14 +49,18 @@ exports.createPaymentIntent = async (req, res) => {
         hotel_id,
         start_date,
         end_date,
-        nights
+        nights,
+        guests,
+        rooms
       }
     });
 
     res.json({
       clientSecret: paymentIntent.client_secret,
       total,
-      nights
+      nights,
+      guests,
+      rooms
     });
 
   } catch (error) {
