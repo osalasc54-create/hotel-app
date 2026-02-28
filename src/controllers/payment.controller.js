@@ -4,18 +4,24 @@ const db = require('../config/db');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 exports.createPaymentIntent = async (req, res) => {
-  const { hotel_id, reservation_id, start_date, end_date, guests = 1, rooms = 1 } = req.body;
+  const {
+    hotel_id,
+    reservation_id,
+    start_date,
+    end_date,
+    guests = 1,
+    rooms = 1,
+    currency = 'mxn'
+  } = req.body;
 
   try {
 
     if (!start_date || !end_date) {
-      return res.status(400).json({ message: 'Datos incompletos' });
+      return res.status(400).json({ message: 'Fechas requeridas' });
     }
 
     if (guests < 1 || rooms < 1) {
-      return res.status(400).json({
-        message: 'Valores inválidos'
-      });
+      return res.status(400).json({ message: 'Valores inválidos' });
     }
 
     const start = new Date(start_date);
@@ -28,45 +34,53 @@ exports.createPaymentIntent = async (req, res) => {
     const diffTime = end - start;
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
-    let finalHotelId = hotel_id;
+    let pricePerNight;
 
-    // 🔥 Si viene reservation_id → buscar hotel_id automáticamente
-    if (reservation_id) {
+    // 🔥 CASO 1 — Reserva nueva
+    if (hotel_id) {
+
+      const [hotelRows] = await db.query(
+        `SELECT price FROM hotels WHERE id = ?`,
+        [hotel_id]
+      );
+
+      if (!hotelRows.length) {
+        return res.status(404).json({ message: 'Hotel no encontrado' });
+      }
+
+      pricePerNight = hotelRows[0].price;
+    }
+
+    // 🔥 CASO 2 — Modificación de reserva
+    else if (reservation_id) {
+
       const [reservationRows] = await db.query(
-        `SELECT hotel_id FROM reservations WHERE id = ? AND user_id = ?`,
-        [reservation_id, req.user.id]
+        `SELECT h.price 
+         FROM reservations r
+         JOIN hotels h ON r.hotel_id = h.id
+         WHERE r.id = ?`,
+        [reservation_id]
       );
 
       if (!reservationRows.length) {
         return res.status(404).json({ message: 'Reserva no encontrada' });
       }
 
-      finalHotelId = reservationRows[0].hotel_id;
+      pricePerNight = reservationRows[0].price;
     }
 
-    if (!finalHotelId) {
-      return res.status(400).json({ message: 'Hotel no especificado' });
+    else {
+      return res.status(400).json({ message: 'Datos insuficientes' });
     }
-
-    const [hotelRows] = await db.query(
-      `SELECT price FROM hotels WHERE id = ?`,
-      [finalHotelId]
-    );
-
-    if (!hotelRows.length) {
-      return res.status(404).json({ message: 'Hotel no encontrado' });
-    }
-
-    const pricePerNight = hotelRows[0].price;
 
     const total = pricePerNight * nights * rooms;
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(total * 100),
-      currency: 'mxn',
+      currency: currency,
       metadata: {
-        hotel_id: finalHotelId,
-        reservation_id: reservation_id || null,
+        hotel_id: hotel_id || '',
+        reservation_id: reservation_id || '',
         start_date,
         end_date,
         nights,
@@ -78,9 +92,7 @@ exports.createPaymentIntent = async (req, res) => {
     res.json({
       clientSecret: paymentIntent.client_secret,
       total,
-      nights,
-      guests,
-      rooms
+      nights
     });
 
   } catch (error) {

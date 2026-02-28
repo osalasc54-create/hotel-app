@@ -1,5 +1,21 @@
 const stripe = Stripe("pk_test_51T4oCQ45fAEaD6ZMLR57YlV2PfsZe1OGq0kBD5yXVkLTsOVEGavJjd98U29kJhiiF1Hd0lPuJnstTyVGV59ycJzq00wI0kfaVE"); 
 
+let selectedCurrency = localStorage.getItem('currency') || 'mxn';
+
+const currencySelector = document.getElementById('currencySelector');
+
+if (currencySelector) {
+  currencySelector.value = selectedCurrency;
+  currencySelector.addEventListener('change', (e) => {
+    selectedCurrency = e.target.value;
+    localStorage.setItem('currency', selectedCurrency);
+  });
+}
+
+function getCurrencySymbol() {
+  return selectedCurrency === 'usd' ? 'USD $' : 'MXN $';
+}
+
 // Decodificar JWT 
 function parseJwt(token) { 
   try { 
@@ -70,7 +86,7 @@ async function loadHotels() {
           <div class="hotel-info">
             <h3>${hotel.name}</h3>
             <p>${hotel.location}</p>
-            <span>$${hotel.price} / noche</span>
+            <span>${getCurrencySymbol()}${hotel.price} / noche</span>
             <div class="hotel-actions">
               <button onclick="event.stopPropagation(); reserveHotel(${hotel.id}, '${hotel.name}', ${hotel.price})">Reservar</button>
               ${user.role === 'admin' ? `
@@ -176,8 +192,8 @@ async function reserveHotel(hotelId, hotelName, pricePerNight) {
       Noches: ${nights}<br>
       Habitaciones: ${rooms}<br>
       Huéspedes: ${guests}<br>
-      Precio por noche: $${pricePerNight}<br>
-      Total estimado: $${total}
+      Precio por noche: ${getCurrencySymbol()}${pricePerNight}<br>
+      Total estimado: ${getCurrencySymbol()}${total}
     `;
   }
 
@@ -221,7 +237,7 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
     <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.7); display:flex; justify-content:center; align-items:center; z-index:3000;">
       <div style="background:white; padding:30px; border-radius:12px; width:400px;">
         <h2>Pago Seguro</h2>
-        <p>Total a pagar: <strong>$${totalAmount}</strong></p>
+        <p>Total a pagar: <strong>${getCurrencySymbol()}${totalAmount}</strong></p>
         <form id="payment-form">
           <div id="card-element" style="margin-bottom:15px;"></div>
           <div id="card-errors" style="color:red; margin-bottom:10px;"></div>
@@ -249,7 +265,8 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
       start_date: startDate, 
       end_date: endDate,
       guests: parseInt(document.getElementById('guests').value) || 1,
-      rooms: parseInt(document.getElementById('rooms').value) || 1
+      rooms: parseInt(document.getElementById('rooms').value) || 1,
+      currency: selectedCurrency
     }) 
   }); 
   const data = await response.json(); 
@@ -307,7 +324,7 @@ async function showPaymentModal(hotelId, startDate, endDate, totalAmount) {
         alert(reservationData.message || 'Error creando reserva'); 
         return; 
       } 
-      alert(`✅ Pago exitoso\nReserva confirmada\nTotal pagado: $${reservationData.total_price}`); 
+      alert(`✅ Pago exitoso\nReserva confirmada\nTotal pagado: ${getCurrencySymbol()}${reservationData.total_price}`); 
       document.getElementById('reservationModal')?.remove(); 
       paymentModal.remove(); 
     } 
@@ -448,7 +465,7 @@ function openHotelModal(id, name, location, price, imageUrl) {
     <div class="hotel-modal-info">
       <h2>${name}</h2>
       <p><strong>Ubicación:</strong> ${location}</p>
-      <p><strong>Precio:</strong> $${price} por noche</p>
+      <p><strong>Precio:</strong> ${getCurrencySymbol()}${price} por noche</p>
       <p>Disfruta de una experiencia única en este hotel exclusivo con excelente servicio y comodidad premium.</p>
       <button onclick="reserveHotel(${id}, '${name}', ${price})">Reservar ahora</button>
     </div>
@@ -552,7 +569,7 @@ function showReservationsModal(reservations) {
     Salida: ${end}<br>
     Huéspedes: ${r.guests}<br>
     Habitaciones: ${r.rooms}<br>
-    Total pagado: $${r.total_price}<br><br>
+    Total pagado: ${getCurrencySymbol()}${r.total_price}<br><br>
 
     <button onclick="editReservation(${r.id}, '${start}', '${end}', ${r.guests}, ${r.rooms})"
       style="
@@ -723,7 +740,7 @@ async function updateReservation(reservationId) {
       return;
     }
 
-    alert('Reserva actualizada. Nuevo total: $' + data.total_price);
+    alert('Reserva actualizada. Nuevo total: ' + getCurrencySymbol() + data.total_price);
 
     document.getElementById('editReservationModal')?.remove();
     document.getElementById('myReservationsModal')?.remove();
@@ -747,6 +764,13 @@ async function updateReservationWithPayment(reservationId) {
     return;
   }
 
+  // 🔥 Validación extra de regla de habitaciones
+  const minRoomsRequired = Math.ceil(guests / 2);
+  if (rooms < minRoomsRequired) {
+    alert(`Se requieren mínimo ${minRoomsRequired} habitaciones`);
+    return;
+  }
+
   // 1️⃣ Primero pedimos al backend que nos calcule el nuevo total (SIN guardar)
   const previewResponse = await fetch('/api/payments/create-payment-intent', {
     method: 'POST',
@@ -759,7 +783,8 @@ async function updateReservationWithPayment(reservationId) {
       start_date: startDate,
       end_date: endDate,
       guests,
-      rooms
+      rooms,
+      currency: selectedCurrency
     })
   });
 
@@ -786,7 +811,7 @@ function showEditPaymentModal(clientSecret, reservationId, startDate, endDate, g
     background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:center;z-index:8000;">
       <div style="background:white;padding:30px;border-radius:12px;width:400px;">
         <h2>Pago adicional</h2>
-        <p>Total nuevo: <strong>$${totalAmount}</strong></p>
+        <p>Total nuevo: <strong>${getCurrencySymbol()}${totalAmount}</strong></p>
         <form id="edit-payment-form">
           <div id="edit-card-element" style="margin-bottom:15px;"></div>
           <div id="edit-card-errors" style="color:red;margin-bottom:10px;"></div>
