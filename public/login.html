@@ -3,9 +3,14 @@
 <head>
   <meta charset="UTF-8">
   <title>Iniciar sesión</title>
+
+  <!-- Fuente Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
   <link rel="stylesheet" href="css/styles.css">
 
-  <!-- 🔥 SCRIPT OFICIAL DE GOOGLE -->
   <script src="https://accounts.google.com/gsi/client" async defer></script>
 </head>
 
@@ -15,7 +20,8 @@
     <div class="logo-container">
       <img src="images/roomly-logo.svg" alt="Roomly Logo" class="roomly-logo">
     </div>
-    <h2>Bienvenido a ROOMLY👋</h2>
+
+    <h2>Bienvenido a ROOMLY 👋</h2>
     <p class="subtitle">Inicia sesión para continuar</p>
 
     <form id="loginForm">
@@ -24,7 +30,6 @@
       <button type="submit">Entrar</button>
     </form>
 
-    <!-- 🔥 BOTÓN GOOGLE -->
     <div id="g_id_onload"
          data-client_id="188558075505-c6al4sge3eri4l09ngqnc141i3e3c4ld.apps.googleusercontent.com"
          data-callback="handleCredentialResponse">
