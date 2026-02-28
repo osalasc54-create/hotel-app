@@ -2,13 +2,20 @@ const db = require('../config/db');
 
 // 🔥 Crear reserva
 exports.createReservation = async (req, res) => {
-  const { hotel_id, start_date, end_date } = req.body;
+  const { hotel_id, start_date, end_date, guests = 1, rooms = 1 } = req.body;
 
   try {
     const user_id = req.user.id;
 
     if (!hotel_id || !start_date || !end_date) {
       return res.status(400).json({ message: 'Datos incompletos' });
+    }
+
+    // ✅ Validar huéspedes y habitaciones
+    if (guests < 1 || rooms < 1) {
+      return res.status(400).json({
+        message: 'Valores inválidos'
+      });
     }
 
     const start = new Date(start_date);
@@ -66,21 +73,25 @@ exports.createReservation = async (req, res) => {
     }
 
     const pricePerNight = hotelRows[0].price;
-    const total = pricePerNight * nights;
+
+    // ✅ Nuevo cálculo considerando habitaciones
+    const total = pricePerNight * nights * rooms;
 
     // 🔥 Insertar reserva
     await db.query(
       `
       INSERT INTO reservations
-      (user_id, hotel_id, start_date, end_date, total_price)
-      VALUES (?, ?, ?, ?, ?)
+      (user_id, hotel_id, start_date, end_date, total_price, guests, rooms)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
       `,
-      [user_id, hotel_id, start_date, end_date, total]
+      [user_id, hotel_id, start_date, end_date, total, guests, rooms]
     );
 
     res.status(201).json({
       message: 'Reserva confirmada',
       nights,
+      guests,
+      rooms,
       total_price: total
     });
 
@@ -123,7 +134,7 @@ exports.getReservationsByHotel = async (req, res) => {
 exports.getMyReservations = async (req, res) => {
   try {
 
-    const db = require('../config/db'); // usa tu conexión real si es diferente
+    const db = require('../config/db');
 
     const [rows] = await db.query(`
       SELECT 
@@ -131,6 +142,8 @@ exports.getMyReservations = async (req, res) => {
         r.start_date,
         r.end_date,
         r.total_price,
+        r.guests,
+        r.rooms,
         r.created_at,
         h.name,
         h.location
