@@ -668,6 +668,24 @@ function editReservation(id, startDate, endDate, guests, rooms) {
   `;
 
   document.body.appendChild(modal);
+const guestsInput = document.getElementById('editGuests');
+const roomsInput = document.getElementById('editRooms');
+
+function enforceRoomRule() {
+  const guests = parseInt(guestsInput.value) || 1;
+  let rooms = parseInt(roomsInput.value) || 1;
+
+  const minRoomsRequired = Math.ceil(guests / 2);
+
+  if (rooms < minRoomsRequired) {
+    rooms = minRoomsRequired;
+    roomsInput.value = rooms;
+  }
+}
+
+guestsInput.addEventListener('input', enforceRoomRule);
+roomsInput.addEventListener('input', enforceRoomRule);
+
 }
 
 async function updateReservation(reservationId) {
