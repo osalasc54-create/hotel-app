@@ -661,7 +661,7 @@ function editReservation(id, startDate, endDate, guests, rooms) {
         <label>Habitaciones</label>
         <input type="number" id="editRooms" value="${rooms}" min="1" style="width:100%; margin-bottom:15px;">
 
-        <button onclick="updateReservation(${id})">Continuar al pago</button>
+        <button onclick="updateReservationWithPayment(${id})">Continuar al pago</button>
         <button onclick="document.getElementById('editReservationModal').remove()">Cancelar</button>
       </div>
     </div>
@@ -715,6 +715,115 @@ async function updateReservation(reservationId) {
   } catch (error) {
     alert('Error de conexión');
   }
+}
+
+async function updateReservationWithPayment(reservationId) {
+
+  const startDate = document.getElementById('editStart').value;
+  const endDate = document.getElementById('editEnd').value;
+  const guests = parseInt(document.getElementById('editGuests').value) || 1;
+  const rooms = parseInt(document.getElementById('editRooms').value) || 1;
+
+  if (!startDate || !endDate) {
+    alert('Selecciona fechas válidas');
+    return;
+  }
+
+  // 1️⃣ Primero pedimos al backend que nos calcule el nuevo total (SIN guardar)
+  const previewResponse = await fetch('/api/payments/create-payment-intent', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + token
+    },
+    body: JSON.stringify({
+      reservation_id: reservationId,
+      start_date: startDate,
+      end_date: endDate,
+      guests,
+      rooms
+    })
+  });
+
+  const data = await previewResponse.json();
+
+  if (!previewResponse.ok) {
+    alert(data.message || 'Error preparando pago');
+    return;
+  }
+
+  const clientSecret = data.clientSecret;
+
+  // 2️⃣ Mostrar Stripe
+  showEditPaymentModal(clientSecret, reservationId, startDate, endDate, guests, rooms, data.total);
+}
+
+function showEditPaymentModal(clientSecret, reservationId, startDate, endDate, guests, rooms, totalAmount) {
+
+  const modal = document.createElement('div');
+  modal.id = 'editPaymentModal';
+
+  modal.innerHTML = `
+    <div style="position:fixed;top:0;left:0;width:100%;height:100%;
+    background:rgba(0,0,0,0.7);display:flex;justify-content:center;align-items:center;z-index:8000;">
+      <div style="background:white;padding:30px;border-radius:12px;width:400px;">
+        <h2>Pago adicional</h2>
+        <p>Total nuevo: <strong>$${totalAmount}</strong></p>
+        <form id="edit-payment-form">
+          <div id="edit-card-element" style="margin-bottom:15px;"></div>
+          <div id="edit-card-errors" style="color:red;margin-bottom:10px;"></div>
+          <button type="submit">Pagar</button>
+          <button type="button" onclick="document.getElementById('editPaymentModal').remove()">Cancelar</button>
+        </form>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  const elements = stripe.elements();
+  const card = elements.create("card");
+  card.mount("#edit-card-element");
+
+  document.getElementById('edit-payment-form').addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const { paymentIntent, error } = await stripe.confirmCardPayment(
+      clientSecret,
+      { payment_method: { card: card } }
+    );
+
+    if (error) {
+      document.getElementById('edit-card-errors').textContent = error.message;
+      return;
+    }
+
+    if (paymentIntent.status === "succeeded") {
+
+      // 3️⃣ Ahora sí actualizamos la reserva
+      await fetch('/api/reservations/' + reservationId, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer ' + token
+        },
+        body: JSON.stringify({
+          start_date: startDate,
+          end_date: endDate,
+          guests,
+          rooms
+        })
+      });
+
+      alert('Reserva modificada correctamente');
+
+      document.getElementById('editPaymentModal')?.remove();
+      document.getElementById('editReservationModal')?.remove();
+      document.getElementById('myReservationsModal')?.remove();
+
+      viewMyReservations();
+    }
+  });
 }
 
 loadHotels();
