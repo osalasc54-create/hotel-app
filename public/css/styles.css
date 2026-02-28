@@ -157,10 +157,11 @@ body {
 
 .hotel-info span {
   display: block;
-  margin-top: 8px;
+  margin-top: 10px;
   font-weight: 700;
-  font-size: 1.15rem;
-  color: #4f46e5;
+  font-size: 1.2rem;
+  color: #111827;
+  letter-spacing: -0.3px;
 }
 
 /* ===========================
@@ -391,4 +392,12 @@ button {
 .btn-danger:hover {
   transform: translateY(-2px);
   box-shadow: 0 8px 20px rgba(220, 38, 38, 0.35);
+}
+
+/* Precio con small */
+.price small {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin-left: 4px;
 }
