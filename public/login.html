@@ -17,18 +17,31 @@
 <body class="login-page auth-body">
 
   <div class="auth-card">
+
     <div class="logo-container">
       <img src="images/roomly-logo.svg" alt="Roomly Logo" class="roomly-logo">
     </div>
 
-    <h2>Bienvenido a ROOMLY 👋</h2>
+    <h1 class="login-title">Bienvenido</h1>
     <p class="subtitle">Inicia sesión para continuar</p>
 
     <form id="loginForm">
-      <input type="email" id="email" placeholder="Correo electrónico" required>
-      <input type="password" id="password" placeholder="Contraseña" required>
-      <button type="submit">Entrar</button>
+      
+      <div class="input-group">
+        <input type="email" id="email" placeholder="Correo electrónico" required>
+      </div>
+
+      <div class="input-group">
+        <input type="password" id="password" placeholder="Contraseña" required>
+      </div>
+
+      <button type="submit" class="login-btn">Entrar</button>
+
     </form>
+
+    <div class="divider">
+      <span>o continúa con</span>
+    </div>
 
     <div id="g_id_onload"
          data-client_id="188558075505-c6al4sge3eri4l09ngqnc141i3e3c4ld.apps.googleusercontent.com"
@@ -48,6 +61,7 @@
       ¿No tienes cuenta?
       <a href="register.html">Regístrate</a>
     </p>
+
   </div>
 
   <script src="js/auth.js"></script>
