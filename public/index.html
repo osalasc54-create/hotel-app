@@ -16,16 +16,17 @@
 <header class="top-bar">
   <h2>HotelApp 🏨</h2>
 
-  <div style="display:flex; gap:10px; align-items:center;">
-    
-    <select id="currencySelector">
-      <option value="mxn">MXN (Pesos)</option>
-      <option value="usd">USD (Dólares)</option>
-    </select>
+  <div class="header-actions">
+  
+  <select id="currencySelector" class="currency-select">
+    <option value="mxn">MXN (Pesos)</option>
+    <option value="usd">USD (Dólares)</option>
+  </select>
 
-    <button onclick="viewMyReservations()">Mis Reservas</button>
-    <button id="logout">Cerrar sesión</button>
-  </div>
+  <button class="btn btn-primary" onclick="viewMyReservations()">Mis Reservas</button>
+  <button class="btn btn-danger" id="logout">Cerrar sesión</button>
+
+</div>
 </header>
 
 <section id="adminPanel" style="display:none; padding:20px; background:#f4f4f4;">
