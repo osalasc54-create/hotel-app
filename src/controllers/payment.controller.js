@@ -4,14 +4,14 @@ const db = require('../config/db');
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 exports.createPaymentIntent = async (req, res) => {
-  const { hotel_id, start_date, end_date, guests = 1, rooms = 1 } = req.body;
+  const { hotel_id, reservation_id, start_date, end_date, guests = 1, rooms = 1 } = req.body;
 
   try {
-    if (!hotel_id || !start_date || !end_date) {
+
+    if (!start_date || !end_date) {
       return res.status(400).json({ message: 'Datos incompletos' });
     }
 
-    // ✅ Validar huéspedes y habitaciones
     if (guests < 1 || rooms < 1) {
       return res.status(400).json({
         message: 'Valores inválidos'
@@ -28,9 +28,29 @@ exports.createPaymentIntent = async (req, res) => {
     const diffTime = end - start;
     const nights = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
 
+    let finalHotelId = hotel_id;
+
+    // 🔥 Si viene reservation_id → buscar hotel_id automáticamente
+    if (reservation_id) {
+      const [reservationRows] = await db.query(
+        `SELECT hotel_id FROM reservations WHERE id = ? AND user_id = ?`,
+        [reservation_id, req.user.id]
+      );
+
+      if (!reservationRows.length) {
+        return res.status(404).json({ message: 'Reserva no encontrada' });
+      }
+
+      finalHotelId = reservationRows[0].hotel_id;
+    }
+
+    if (!finalHotelId) {
+      return res.status(400).json({ message: 'Hotel no especificado' });
+    }
+
     const [hotelRows] = await db.query(
       `SELECT price FROM hotels WHERE id = ?`,
-      [hotel_id]
+      [finalHotelId]
     );
 
     if (!hotelRows.length) {
@@ -39,14 +59,14 @@ exports.createPaymentIntent = async (req, res) => {
 
     const pricePerNight = hotelRows[0].price;
 
-    // ✅ MISMO cálculo que reservations
     const total = pricePerNight * nights * rooms;
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: Math.round(total * 100), // Stripe trabaja en centavos
+      amount: Math.round(total * 100),
       currency: 'mxn',
       metadata: {
-        hotel_id,
+        hotel_id: finalHotelId,
+        reservation_id: reservation_id || null,
         start_date,
         end_date,
         nights,
