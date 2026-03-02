@@ -579,8 +579,8 @@ function showReservationsModal(reservations) {
   ">
     <strong>${r.name}</strong><br>
     Ubicación: ${r.location}<br>
-    Entrada: ${start}<br>
-    Salida: ${end}<br>
+    Entrada: ${formatDatePretty(r.start_date)}<br>
+    Salida: ${formatDatePretty(r.end_date)}<br>
     Huéspedes: ${r.guests}<br>
     Habitaciones: ${r.rooms}<br>
     Total pagado: ${getCurrencySymbol()}${convertPrice(r.total_price)}<br><br>
@@ -898,5 +898,20 @@ document.getElementById("currencySelector")
   .addEventListener("change", updateExchangeInfo);
 
 updateExchangeInfo();
+
+function formatDatePretty(dateString) {
+  const date = new Date(dateString);
+
+  const months = [
+    "JAN","FEB","MAR","APR","MAY","JUN",
+    "JUL","AUG","SEP","OCT","NOV","DEC"
+  ];
+
+  const year = date.getFullYear();
+  const month = months[date.getMonth()];
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
 
 loadHotels();
