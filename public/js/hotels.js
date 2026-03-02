@@ -2,7 +2,7 @@ const stripe = Stripe("pk_test_51T4oCQ45fAEaD6ZMLR57YlV2PfsZe1OGq0kBD5yXVkLTsOVE
 
 let selectedCurrency = localStorage.getItem('currency') || 'mxn';
 
-const EXCHANGE_RATE = 17; // 1 USD = 17 MXN
+const EXCHANGE_RATE = 17.00; // puedes actualizarlo manualmente
 
 const currencySelector = document.getElementById('currencySelector');
 
@@ -121,18 +121,22 @@ async function reserveHotel(hotelId, hotelName, pricePerNight) {
   modal.innerHTML = `
     <div style="position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.6); display:flex; justify-content:center; align-items:center; z-index:2000;">
       <div style="background:white; padding:30px; border-radius:12px; width:400px;">
-        <h2>${hotelName}</h2>
-        <label>Fecha de entrada</label>
-        <input type="date" id="startDate" style="width:100%; margin-bottom:10px;">
-        <label>Fecha de salida</label>
-        <input type="date" id="endDate" style="width:100%; margin-bottom:15px;">
-        <label>Huéspedes</label>
-        <input type="number" id="guests" min="1" value="1" style="width:100%; margin-bottom:10px;">
-        <label>Habitaciones</label>
-        <input type="number" id="rooms" min="1" value="1" style="width:100%; margin-bottom:15px;">
-        <div id="reservationSummary" style="margin-bottom:15px; font-weight:bold;"></div>
-        <button id="goToPayment">Proceder al pago</button>
-        <button id="closeReservation">Cancelar</button>
+        <div class="reservation-form">
+          <h2>${hotelName}</h2>
+          <label>Fecha de entrada</label>
+          <input type="date" id="startDate">
+          <label>Fecha de salida</label>
+          <input type="date" id="endDate">
+          <label>Huéspedes</label>
+          <input type="number" id="guests" min="1" value="1">
+          <label>Habitaciones</label>
+          <input type="number" id="rooms" min="1" value="1">
+          <div id="reservationSummary" style="margin-bottom:15px; font-weight:bold;"></div>
+          <div class="reservation-actions">
+            <button class="btn-secondary" id="closeReservation">Cancelar</button>
+            <button class="btn-primary" id="goToPayment">Proceder al pago</button>
+          </div>
+        </div>
       </div>
     </div>
   `; 
@@ -878,5 +882,21 @@ function showEditPaymentModal(clientSecret, reservationId, startDate, endDate, g
     }
   });
 }
+
+function updateExchangeInfo() {
+  const currency = document.getElementById("currencySelector").value;
+  const info = document.getElementById("exchangeRateInfo");
+
+  if (currency === "usd") {
+    info.textContent = `1 USD = ${EXCHANGE_RATE} MXN`;
+  } else {
+    info.textContent = `1 USD = ${EXCHANGE_RATE} MXN`;
+  }
+}
+
+document.getElementById("currencySelector")
+  .addEventListener("change", updateExchangeInfo);
+
+updateExchangeInfo();
 
 loadHotels();
