@@ -1,7 +1,10 @@
 const Stripe = require('stripe');
 const db = require('../config/db');
+const logger = require('../utils/logger');
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const stripe = process.env.STRIPE_SECRET_KEY
+  ? new Stripe(process.env.STRIPE_SECRET_KEY)
+  : null;
 
 exports.createPaymentIntent = async (req, res) => {
   const {
@@ -15,12 +18,20 @@ exports.createPaymentIntent = async (req, res) => {
   } = req.body;
 
   try {
+    if (!stripe) {
+      logger.error('Stripe no configurado: falta STRIPE_SECRET_KEY');
+      return res.status(500).json({
+        message: 'Stripe no está configurado en el servidor'
+      });
+    }
 
     if (!start_date || !end_date) {
+      logger.error('Error creando PaymentIntent: fechas requeridas');
       return res.status(400).json({ message: 'Fechas requeridas' });
     }
 
     if (guests < 1 || rooms < 1) {
+      logger.error('Error creando PaymentIntent: valores inválidos');
       return res.status(400).json({ message: 'Valores inválidos' });
     }
 
@@ -28,6 +39,7 @@ exports.createPaymentIntent = async (req, res) => {
     const end = new Date(end_date);
 
     if (end <= start) {
+      logger.error('Error creando PaymentIntent: fechas inválidas');
       return res.status(400).json({ message: 'Fechas inválidas' });
     }
 
@@ -36,24 +48,19 @@ exports.createPaymentIntent = async (req, res) => {
 
     let pricePerNight;
 
-    // 🔥 CASO 1 — Reserva nueva
     if (hotel_id) {
-
       const [hotelRows] = await db.query(
         `SELECT price FROM hotels WHERE id = ?`,
         [hotel_id]
       );
 
       if (!hotelRows.length) {
+        logger.error(`PaymentIntent fallido: hotel no encontrado ID ${hotel_id}`);
         return res.status(404).json({ message: 'Hotel no encontrado' });
       }
 
       pricePerNight = hotelRows[0].price;
-    }
-
-    // 🔥 CASO 2 — Modificación de reserva
-    else if (reservation_id) {
-
+    } else if (reservation_id) {
       const [reservationRows] = await db.query(
         `SELECT h.price 
          FROM reservations r
@@ -63,20 +70,17 @@ exports.createPaymentIntent = async (req, res) => {
       );
 
       if (!reservationRows.length) {
+        logger.error(`PaymentIntent fallido: reserva no encontrada ID ${reservation_id}`);
         return res.status(404).json({ message: 'Reserva no encontrada' });
       }
 
       pricePerNight = reservationRows[0].price;
-    }
-
-    else {
+    } else {
+      logger.error('PaymentIntent fallido: datos insuficientes');
       return res.status(400).json({ message: 'Datos insuficientes' });
     }
 
-    // 🔥 Siempre calcular internamente en MXN
     const totalMXN = pricePerNight * nights * rooms;
-
-    // 🔥 Tipo de cambio fijo (puedes hacerlo dinámico después)
     const EXCHANGE_RATE = 17;
 
     let finalAmount;
@@ -104,14 +108,17 @@ exports.createPaymentIntent = async (req, res) => {
       }
     });
 
+    logger.info('PaymentIntent creado correctamente');
+
     res.json({
       clientSecret: paymentIntent.client_secret,
-      total: totalMXN, // siempre regresamos el total base en MXN
+      total: totalMXN,
       nights
     });
 
   } catch (error) {
     console.error(error);
+    logger.error(`Error creando PaymentIntent: ${error.message}`);
     res.status(500).json({ message: 'Error creando PaymentIntent' });
   }
 };
