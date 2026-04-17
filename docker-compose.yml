@@ -1,28 +1,6 @@
 version: '3.9'
 
 services:
-  app:
-    build: .
-    container_name: hotel_app
-    ports:
-      - "3000:3000"
-    environment:
-      PORT: 3000
-      DB_HOST: db
-      DB_USER: root
-      DB_PASSWORD: 11112222
-      DB_NAME: hotel_devops_db
-      DB_PORT: 3306
-      DB_SSL: false
-      JWT_SECRET: hotelapp_secreto_local_123
-      STRIPE_SECRET_KEY: ""
-      STRIPE_PUBLIC_KEY: ""
-      GOOGLE_CLIENT_ID: ""
-    depends_on:
-      - db
-    volumes:
-      - ./logs:/app/logs
-
   db:
     image: mysql:8.0.36
     container_name: hotel_db
@@ -35,6 +13,29 @@ services:
     volumes:
       - mysql_data:/var/lib/mysql
       - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  app:
+    build: .
+    container_name: hotel_app
+    restart: always
+    ports:
+      - "3000:3000"
+    environment:
+      PORT: "3000"
+      DB_HOST: "db"
+      DB_USER: "root"
+      DB_PASSWORD: "11112222"
+      DB_NAME: "hotel_devops_db"
+      DB_PORT: "3306"
+      DB_SSL: "false"
+      JWT_SECRET: "hotelapp_secreto_local_123"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_PUBLIC_KEY: ""
+      GOOGLE_CLIENT_ID: ""
+    depends_on:
+      - db
+    volumes:
+      - ./logs:/app/logs
 
 volumes:
   mysql_data:

@@ -13,3 +13,17 @@
 [2026-04-10 18:38:04] INFO: Servidor iniciado en puerto 3000
 [2026-04-10 18:38:44] INFO: Rutas de Stripe desactivadas por falta de STRIPE_SECRET_KEY
 [2026-04-10 18:38:44] INFO: Servidor iniciado en puerto 3000
+[2026-04-17 02:00:38] INFO: Rutas de Stripe desactivadas por falta de STRIPE_SECRET_KEY
+[2026-04-17 02:00:38] INFO: Servidor iniciado en puerto 3000
+[2026-04-17 02:17:13] INFO: Rutas de Stripe desactivadas por falta de STRIPE_SECRET_KEY
+[2026-04-17 02:17:13] INFO: Servidor iniciado en puerto 3000
+[2026-04-17 02:18:41] INFO: GET /
+[2026-04-17 02:22:00] INFO: GET /
+[2026-04-17 02:27:10] INFO: GET /
+[2026-04-17 02:27:10] INFO: GET /css/styles.css
+[2026-04-17 02:27:10] INFO: GET /js/hotels.js
+[2026-04-17 02:27:13] INFO: GET /login.html
+[2026-04-17 02:27:13] INFO: GET /css/styles.css
+[2026-04-17 02:27:13] INFO: GET /images/roomly-logo.svg
+[2026-04-17 02:27:13] INFO: GET /js/auth.js
+[2026-04-17 02:27:28] INFO: GET /favicon.ico
